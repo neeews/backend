@@ -2,7 +2,7 @@ FROM gradle:8.13-jdk21 AS build
 WORKDIR /app
 COPY gradlew gradlew.bat settings.gradle build.gradle ./
 COPY gradle gradle
-RUN ./gradlew dependencies --no-daemon
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
