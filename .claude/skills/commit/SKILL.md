@@ -1,5 +1,5 @@
 --- 
-name: commit-manager
+name: commit
 description: Analyzes Git changes to separate commits by function and purpose, and applies Conventional Commit rules to maintain a clean Git history.
 ---
 
