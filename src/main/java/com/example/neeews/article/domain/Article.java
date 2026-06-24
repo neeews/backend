@@ -60,4 +60,8 @@ public class Article {
     public void incrementViewCount() {
         this.viewCount++;
     }
+
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 }

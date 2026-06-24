@@ -14,6 +14,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     boolean existsByLink(String link);
 
+    java.util.Optional<Article> findByLink(String link);
+
     Page<Article> findBySource(NewsSource source, Pageable pageable);
 
     List<Article> findTop10ByOrderByPublishedAtDesc();

@@ -25,4 +25,9 @@ public class RssController {
         NewsSource newsSource = NewsSource.valueOf(source.toUpperCase());
         return ResponseEntity.ok(Map.of("saved", rssFetchService.fetchSource(newsSource)));
     }
+
+    @PostMapping("/fill-images")
+    public ResponseEntity<Map<String, Integer>> fillImages() {
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.fillMissingImageUrls()));
+    }
 }

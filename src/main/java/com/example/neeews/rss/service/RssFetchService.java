@@ -40,6 +40,45 @@ public class RssFetchService {
     }
 
     @Transactional
+    public int fillMissingImageUrls() {
+        return Arrays.stream(NewsSource.values())
+                .mapToInt(this::fillImagesFromSource)
+                .sum();
+    }
+
+    @Transactional
+    public int fillImagesFromSource(NewsSource source) {
+        int updated = 0;
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(source.getRssUrl()).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+            conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml");
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(15_000);
+            SyndFeed feed;
+            try (InputStream is = conn.getInputStream()) {
+                feed = new SyndFeedInput().build(new XmlReader(is));
+            }
+            for (SyndEntry entry : feed.getEntries()) {
+                String link = entry.getLink();
+                if (link == null) continue;
+                articleRepository.findByLink(link).ifPresent(article -> {
+                    if (article.getImageUrl() != null) return;
+                    String imageUrl = extractImageUrl(entry);
+                    if (imageUrl != null) {
+                        article.updateImageUrl(imageUrl);
+                    }
+                });
+                updated++;
+            }
+            log.info("[RSS 이미지] {} - {}건 처리", source.getDisplayName(), updated);
+        } catch (Exception e) {
+            log.error("[RSS 이미지] {} 실패: {}", source.getDisplayName(), e.getMessage());
+        }
+        return updated;
+    }
+
+    @Transactional
     public int fetchSource(NewsSource source) {
         int saved = 0;
         try {
