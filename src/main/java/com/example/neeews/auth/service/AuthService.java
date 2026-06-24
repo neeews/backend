@@ -74,6 +74,22 @@ public class AuthService {
         refreshTokenRepository.deleteByToken(refreshTokenStr);
     }
 
+    @Transactional
+    public void requestPasswordReset(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("등록되지 않은 이메일입니다.");
+        }
+        emailVerificationService.sendPasswordResetCode(email);
+    }
+
+    @Transactional
+    public void confirmPasswordReset(PasswordResetConfirmRequest request) {
+        emailVerificationService.verifyCodeDirect(request.getEmail(), request.getCode());
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+    }
+
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));

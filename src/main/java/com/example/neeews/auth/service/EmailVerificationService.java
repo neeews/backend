@@ -22,27 +22,28 @@ public class EmailVerificationService {
 
     @Transactional
     public void sendVerificationCode(EmailSendRequest request) {
-        String code = generateCode();
-        EmailVerification verification = EmailVerification.builder()
-                .email(request.getEmail())
-                .code(code)
-                .verified(false)
-                .expiresAt(LocalDateTime.now().plusMinutes(5))
-                .build();
-        emailVerificationRepository.save(verification);
-        sendEmail(request.getEmail(), code);
+        sendCode(request.getEmail(), "[neeews] 이메일 인증 코드");
+    }
+
+    @Transactional
+    public void sendPasswordResetCode(String email) {
+        sendCode(email, "[neeews] 비밀번호 재설정 코드");
     }
 
     @Transactional
     public void verifyCode(EmailVerifyRequest request) {
-        EmailVerification verification = emailVerificationRepository
-                .findTopByEmailOrderByCreatedAtDesc(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("인증 코드를 먼저 요청해주세요."));
+        verifyCodeDirect(request.getEmail(), request.getCode());
+    }
 
+    @Transactional
+    public void verifyCodeDirect(String email, String code) {
+        EmailVerification verification = emailVerificationRepository
+                .findTopByEmailOrderByCreatedAtDesc(email)
+                .orElseThrow(() -> new IllegalArgumentException("인증 코드를 먼저 요청해주세요."));
         if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("인증 코드가 만료되었습니다.");
         }
-        if (!verification.getCode().equals(request.getCode())) {
+        if (!verification.getCode().equals(code)) {
             throw new IllegalArgumentException("인증 코드가 올바르지 않습니다.");
         }
         verification.verify();
@@ -52,15 +53,22 @@ public class EmailVerificationService {
         return emailVerificationRepository.existsByEmailAndVerifiedTrue(email);
     }
 
-    private String generateCode() {
-        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
-    }
-
-    private void sendEmail(String to, String code) {
+    private void sendCode(String email, String subject) {
+        String code = generateCode();
+        emailVerificationRepository.save(EmailVerification.builder()
+                .email(email)
+                .code(code)
+                .verified(false)
+                .expiresAt(LocalDateTime.now().plusMinutes(5))
+                .build());
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject("[neeews] 이메일 인증 코드");
+        message.setTo(email);
+        message.setSubject(subject);
         message.setText("인증 코드: " + code + "\n\n5분 이내에 입력해주세요.");
         mailSender.send(message);
+    }
+
+    private String generateCode() {
+        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
     }
 }

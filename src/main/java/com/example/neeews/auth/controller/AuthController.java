@@ -49,6 +49,18 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/password/reset/request")
+    public ResponseEntity<Void> requestPasswordReset(@RequestBody EmailSendRequest request) {
+        authService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/password/reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(@RequestBody PasswordResetConfirmRequest request) {
+        authService.confirmPasswordReset(request);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMe(Authentication authentication) {
         return ResponseEntity.ok(authService.getMe(authentication.getName()));

@@ -6,6 +6,7 @@ import com.example.neeews.auth.dto.UserResponse;
 import com.example.neeews.auth.repository.RefreshTokenRepository;
 import com.example.neeews.auth.repository.UserRepository;
 import com.example.neeews.bookmark.repository.BookmarkRepository;
+import com.example.neeews.search.repository.SearchHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final SearchHistoryRepository searchHistoryRepository;
 
     @Transactional(readOnly = true)
     public UserResponse getProfile(String email) {
@@ -40,6 +42,7 @@ public class UserService {
         User user = getUser(email);
         bookmarkRepository.deleteAllByUser(user);
         refreshTokenRepository.deleteByUser(user);
+        searchHistoryRepository.deleteAllByUser(user);
         userRepository.delete(user);
     }
 
