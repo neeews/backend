@@ -29,7 +29,11 @@ public class ArticleController {
             @RequestParam(defaultValue = "1") int page
     ) {
         Page<ArticleResponse> result = articleService.getArticlesByCategory(category, sort, page);
-        return ResponseEntity.ok(Map.of("articles", result.getContent()));
+        return ResponseEntity.ok(Map.of(
+                "articles", result.getContent(),
+                "total", result.getTotalElements(),
+                "page", page
+        ));
     }
 
     @GetMapping("/breaking")
