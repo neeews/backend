@@ -3,11 +3,13 @@ package com.example.neeews.rss.service;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.domain.NewsSource;
+import com.rometools.modules.mediarss.MediaEntryModule;
 import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -93,15 +97,47 @@ public class RssFetchService {
         return categories.get(0).getName();
     }
 
+    private static final Pattern IMG_PATTERN = Pattern.compile("<img[^>]+src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+
     private String extractImageUrl(SyndEntry entry) {
+        // 1. <enclosure type="image/...">
         try {
-            if (!entry.getEnclosures().isEmpty()) {
-                String type = entry.getEnclosures().get(0).getType();
-                if (type != null && type.startsWith("image/")) {
-                    return entry.getEnclosures().get(0).getUrl();
+            for (var enc : entry.getEnclosures()) {
+                if (enc.getType() != null && enc.getType().startsWith("image/")) {
+                    return enc.getUrl();
                 }
             }
         } catch (Exception ignored) {}
+
+        // 2. <media:thumbnail> 또는 <media:content>
+        try {
+            MediaEntryModule media = (MediaEntryModule) entry.getModule(MediaEntryModule.URI);
+            if (media != null) {
+                for (var group : media.getMediaGroups()) {
+                    var thumbs = group.getMetadata().getThumbnail();
+                    if (thumbs != null && thumbs.length > 0) return thumbs[0].getUrl().toString();
+                    for (var content : group.getContents()) {
+                        if (content.getReference() != null) return content.getReference().toString();
+                    }
+                }
+                for (var thumb : media.getMetadata().getThumbnail()) {
+                    return thumb.getUrl().toString();
+                }
+                for (var content : media.getMediaContents()) {
+                    if (content.getReference() != null) return content.getReference().toString();
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. <description> HTML에서 <img src="..."> 추출
+        try {
+            String desc = entry.getDescription() != null ? entry.getDescription().getValue() : null;
+            if (desc != null) {
+                Matcher m = IMG_PATTERN.matcher(desc);
+                if (m.find()) return m.group(1);
+            }
+        } catch (Exception ignored) {}
+
         return null;
     }
 }
