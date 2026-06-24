@@ -28,6 +28,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      DB_URL: jdbc:mysql://db:3306/${DB_NAME}?serverTimezone=UTC
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: ${DB_NAME}
