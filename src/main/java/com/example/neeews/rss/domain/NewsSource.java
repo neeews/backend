@@ -5,10 +5,6 @@ import lombok.Getter;
 @Getter
 public enum NewsSource {
 
-    // 일반
-    YONHAP("연합뉴스", "https://www.yna.co.kr/rss/news.xml", "종합"),
-    DONGA("동아일보", "https://rss.donga.com/total.xml", "종합"),
-
     // 정치
     YONHAP_POLITICS("연합뉴스", "https://www.yna.co.kr/rss/politics.xml", "정치"),
     HANI_POLITICS("한겨레", "https://www.hani.co.kr/rss/politics/", "정치"),
