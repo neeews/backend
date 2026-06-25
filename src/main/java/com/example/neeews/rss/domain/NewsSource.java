@@ -12,7 +12,7 @@ public enum NewsSource {
 
     // 정치
     YONHAP_POLITICS("연합뉴스", "https://www.yna.co.kr/rss/politics.xml", "정치"),
-    HANI_POLITICS("한겨레", "https://www.hani.co.kr/rss/politics/", "정치"),
+    HANI_POLITICS("한겨레", "https://www.hani.co.kr/rss/politics", "정치"),
     KHAN_POLITICS("경향신문", "https://www.khan.co.kr/rss/rssdata/politic_news.xml", "정치"),
 
     // 경제
@@ -22,7 +22,7 @@ public enum NewsSource {
 
     // 사회
     YONHAP_SOCIETY("연합뉴스", "https://www.yna.co.kr/rss/society.xml", "사회"),
-    HANI_SOCIETY("한겨레", "https://www.hani.co.kr/rss/society/", "사회"),
+    HANI_SOCIETY("한겨레", "https://www.hani.co.kr/rss/society", "사회"),
     KHAN_SOCIETY("경향신문", "https://www.khan.co.kr/rss/rssdata/society_news.xml", "사회"),
 
     // 연예/문화
@@ -32,19 +32,19 @@ public enum NewsSource {
 
     // 스포츠
     YONHAP_SPORTS("연합뉴스", "https://www.yna.co.kr/rss/sports.xml", "스포츠"),
-    HANI_SPORTS("한겨레", "https://www.hani.co.kr/rss/sports/", "스포츠"),
+    HANI_SPORTS("한겨레", "https://www.hani.co.kr/rss/sports", "스포츠"),
     KHAN_SPORTS("경향신문", "https://www.khan.co.kr/rss/rssdata/kh_sports.xml", "스포츠"),
 
     // 세계
     YONHAP_WORLD("연합뉴스", "https://www.yna.co.kr/rss/international.xml", "세계"),
-    HANI_WORLD("한겨레", "https://www.hani.co.kr/rss/international/", "세계"),
+    HANI_WORLD("한겨레", "https://www.hani.co.kr/rss/international", "세계"),
     KHAN_WORLD("경향신문", "https://www.khan.co.kr/rss/rssdata/kh_world.xml", "세계"),
 
     // IT/과학
     ETNEWS("전자신문", "https://rss.etnews.com/Section901.xml", "IT/과학"),
     ZDNET_KOREA("ZDnet코리아", "https://feeds.feedburner.com/zdkorea", "IT/과학"),
     YONHAP_IT("연합뉴스", "https://www.yna.co.kr/rss/it.xml", "IT/과학"),
-    HANI_SCIENCE("한겨레", "https://www.hani.co.kr/rss/science/", "IT/과학"),
+    HANI_SCIENCE("한겨레", "https://www.hani.co.kr/rss/science", "IT/과학"),
     KHAN_IT("경향신문", "https://www.khan.co.kr/rss/rssdata/it_news.xml", "IT/과학");
 
     private final String displayName;

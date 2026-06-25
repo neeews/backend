@@ -106,11 +106,7 @@ public class RssFetchService {
     public int fillImagesFromSource(NewsSource source) {
         int updated = 0;
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(source.getRssUrl()).openConnection();
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
-            conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml");
-            conn.setConnectTimeout(10_000);
-            conn.setReadTimeout(15_000);
+            HttpURLConnection conn = openConnection(source.getRssUrl());
             SyndFeed feed;
             try (InputStream is = conn.getInputStream()) {
                 feed = new SyndFeedInput().build(new XmlReader(is));
@@ -138,11 +134,7 @@ public class RssFetchService {
     public int fetchSource(NewsSource source) {
         int saved = 0;
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(source.getRssUrl()).openConnection();
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
-            conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml");
-            conn.setConnectTimeout(10_000);
-            conn.setReadTimeout(15_000);
+            HttpURLConnection conn = openConnection(source.getRssUrl());
             SyndFeed feed;
             try (InputStream is = conn.getInputStream()) {
                 feed = new SyndFeedInput().build(new XmlReader(is));
@@ -185,6 +177,26 @@ public class RssFetchService {
             log.error("[RSS] {} 수집 실패: {}", source.getDisplayName(), e.getMessage());
         }
         return saved;
+    }
+
+    private HttpURLConnection openConnection(String urlStr) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+        conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml");
+        conn.setConnectTimeout(10_000);
+        conn.setReadTimeout(30_000);
+        conn.setInstanceFollowRedirects(true);
+        int status = conn.getResponseCode();
+        if (status == 301 || status == 302 || status == 308) {
+            String redirectUrl = conn.getHeaderField("Location");
+            conn.disconnect();
+            conn = (HttpURLConnection) new URL(redirectUrl).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+            conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml");
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(30_000);
+        }
+        return conn;
     }
 
     private String extractCategory(List<SyndCategory> categories) {
