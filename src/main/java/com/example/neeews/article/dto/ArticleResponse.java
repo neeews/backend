@@ -3,6 +3,7 @@ package com.example.neeews.article.dto;
 import com.example.neeews.article.domain.Article;
 import lombok.Builder;
 import lombok.Getter;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 
@@ -32,7 +33,7 @@ public class ArticleResponse {
 
     private static String extractSummary(String description) {
         if (description == null) return null;
-        String plain = description.replaceAll("<[^>]*>", "").trim();
+        String plain = HtmlUtils.htmlUnescape(description.replaceAll("<[^>]*>", "")).trim();
         return plain.length() > 200 ? plain.substring(0, 200) + "..." : plain;
     }
 }
