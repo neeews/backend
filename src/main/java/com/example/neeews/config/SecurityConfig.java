@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/search").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/keywords/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/news/**").permitAll()
+                        .requestMatchers("/rss/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
