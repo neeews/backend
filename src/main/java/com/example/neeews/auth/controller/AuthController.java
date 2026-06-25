@@ -1,6 +1,7 @@
 package com.example.neeews.auth.controller;
 
-import com.example.neeews.auth.dto.*;
+import com.example.neeews.auth.dto.request.*;
+import com.example.neeews.auth.dto.response.*;
 import com.example.neeews.auth.service.AuthService;
 import com.example.neeews.auth.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;

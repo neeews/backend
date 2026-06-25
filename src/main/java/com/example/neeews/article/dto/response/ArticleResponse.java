@@ -1,4 +1,4 @@
-package com.example.neeews.article.dto;
+package com.example.neeews.article.dto.response;
 
 import com.example.neeews.article.domain.Article;
 import lombok.Builder;

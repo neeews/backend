@@ -2,7 +2,8 @@ package com.example.neeews.auth.service;
 
 import com.example.neeews.auth.domain.RefreshToken;
 import com.example.neeews.auth.domain.User;
-import com.example.neeews.auth.dto.*;
+import com.example.neeews.auth.dto.request.*;
+import com.example.neeews.auth.dto.response.*;
 import com.example.neeews.auth.repository.RefreshTokenRepository;
 import com.example.neeews.auth.repository.UserRepository;
 import com.example.neeews.security.JwtUtil;

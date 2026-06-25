@@ -1,4 +1,4 @@
-package com.example.neeews.keyword.dto;
+package com.example.neeews.keyword.dto.response;
 
 import com.example.neeews.keyword.domain.TrendingKeyword;
 import lombok.Builder;

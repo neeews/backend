@@ -1,4 +1,4 @@
-package com.example.neeews.auth.dto;
+package com.example.neeews.auth.dto.response;
 
 import com.example.neeews.auth.domain.User;
 import lombok.Builder;

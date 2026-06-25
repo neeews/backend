@@ -1,8 +1,8 @@
 package com.example.neeews.user.service;
 
-import com.example.neeews.article.dto.ArticleResponse;
+import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.auth.domain.User;
-import com.example.neeews.auth.dto.UserResponse;
+import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.auth.repository.RefreshTokenRepository;
 import com.example.neeews.auth.repository.UserRepository;
 import com.example.neeews.bookmark.repository.BookmarkRepository;

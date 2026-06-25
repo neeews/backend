@@ -1,6 +1,6 @@
 package com.example.neeews.search.controller;
 
-import com.example.neeews.article.dto.ArticleResponse;
+import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.service.ArticleService;
 import com.example.neeews.search.service.SearchHistoryService;
 import lombok.RequiredArgsConstructor;

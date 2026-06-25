@@ -1,7 +1,7 @@
 package com.example.neeews.user.controller;
 
-import com.example.neeews.article.dto.ArticleResponse;
-import com.example.neeews.auth.dto.UserResponse;
+import com.example.neeews.article.dto.response.ArticleResponse;
+import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.search.service.SearchHistoryService;
 import com.example.neeews.user.service.UserService;
 import lombok.RequiredArgsConstructor;

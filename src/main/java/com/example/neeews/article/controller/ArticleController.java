@@ -1,7 +1,7 @@
 package com.example.neeews.article.controller;
 
-import com.example.neeews.article.dto.ArticleDetailResponse;
-import com.example.neeews.article.dto.ArticleResponse;
+import com.example.neeews.article.dto.response.ArticleDetailResponse;
+import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.service.ArticleService;
 import com.example.neeews.bookmark.service.BookmarkService;
 import lombok.RequiredArgsConstructor;

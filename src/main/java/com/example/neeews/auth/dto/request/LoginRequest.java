@@ -1,10 +1,11 @@
-package com.example.neeews.auth.dto;
+package com.example.neeews.auth.dto.request;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class EmailSendRequest {
+public class LoginRequest {
     private String email;
+    private String password;
 }

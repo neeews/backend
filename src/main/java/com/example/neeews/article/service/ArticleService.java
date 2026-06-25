@@ -1,8 +1,8 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
-import com.example.neeews.article.dto.ArticleDetailResponse;
-import com.example.neeews.article.dto.ArticleResponse;
+import com.example.neeews.article.dto.response.ArticleDetailResponse;
+import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.bookmark.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +55,7 @@ public class ArticleService {
         Sort s = "popular".equals(sort)
                 ? Sort.by(Sort.Direction.DESC, "viewCount")
                 : Sort.by(Sort.Direction.DESC, "publishedAt");
-        Pageable pageable = PageRequest.of(page - 1, 10, s);
+        Pageable pageable = PageRequest.of(page - 1, 12, s);
         return articleRepository.findByCategoryOptional(category, pageable).map(ArticleResponse::from);
     }
 

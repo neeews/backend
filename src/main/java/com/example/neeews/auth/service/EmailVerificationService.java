@@ -1,8 +1,8 @@
 package com.example.neeews.auth.service;
 
 import com.example.neeews.auth.domain.EmailVerification;
-import com.example.neeews.auth.dto.EmailSendRequest;
-import com.example.neeews.auth.dto.EmailVerifyRequest;
+import com.example.neeews.auth.dto.request.EmailSendRequest;
+import com.example.neeews.auth.dto.request.EmailVerifyRequest;
 import com.example.neeews.auth.repository.EmailVerificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;

@@ -1,6 +1,6 @@
 package com.example.neeews.keyword.controller;
 
-import com.example.neeews.keyword.dto.TrendingKeywordResponse;
+import com.example.neeews.keyword.dto.response.TrendingKeywordResponse;
 import com.example.neeews.keyword.service.TrendingKeywordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
