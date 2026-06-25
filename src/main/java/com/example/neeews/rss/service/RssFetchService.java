@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,9 +34,14 @@ public class RssFetchService {
 
     private final ArticleRepository articleRepository;
 
+    private static final Set<NewsSource> DEPRECATED_SOURCES = Set.of(
+            NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN
+    );
+
     @Transactional
     public int fetchAll() {
         return Arrays.stream(NewsSource.values())
+                .filter(s -> !DEPRECATED_SOURCES.contains(s))
                 .mapToInt(this::fetchSource)
                 .sum();
     }
@@ -77,7 +83,9 @@ public class RssFetchService {
         int updated = 0;
         for (Article article : all) {
             String current = article.getCategory();
-            String correct = CATEGORY_MAP.getOrDefault(current, article.getSource().getCategory());
+            String correct = current != null
+                    ? CATEGORY_MAP.getOrDefault(current, article.getSource().getCategory())
+                    : article.getSource().getCategory();
             if (correct != null && !correct.equals(current)) {
                 article.updateCategory(correct);
                 updated++;
