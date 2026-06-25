@@ -25,6 +25,7 @@ public class ArticleDetailResponse {
         private String category;
         private String imageUrl;
         private String source;
+        private String articleUrl;
         private LocalDateTime publishedAt;
         private boolean isBookmarked;
     }
@@ -45,6 +46,7 @@ public class ArticleDetailResponse {
                         .category(article.getCategory())
                         .imageUrl(article.getImageUrl())
                         .source(article.getSource().getDisplayName())
+                        .articleUrl(article.getLink())
                         .publishedAt(article.getPublishedAt())
                         .isBookmarked(isBookmarked)
                         .build())
