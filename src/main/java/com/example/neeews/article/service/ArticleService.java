@@ -55,7 +55,7 @@ public class ArticleService {
         Sort s = "popular".equals(sort)
                 ? Sort.by(Sort.Direction.DESC, "viewCount")
                 : Sort.by(Sort.Direction.DESC, "publishedAt");
-        Pageable pageable = PageRequest.of(page - 1, 12, s);
+        Pageable pageable = PageRequest.of(page - 1, 21, s);
         return articleRepository.findByCategoryOptional(category, pageable).map(ArticleResponse::from);
     }
 
