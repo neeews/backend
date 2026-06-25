@@ -30,4 +30,14 @@ public class RssController {
     public ResponseEntity<Map<String, Integer>> fillImages() {
         return ResponseEntity.ok(Map.of("updated", rssFetchService.fillMissingImageUrls()));
     }
+
+    @PostMapping("/fill-images/web")
+    public ResponseEntity<Map<String, Integer>> fillImagesFromWeb() {
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.fillMissingImageUrlsFromWeb()));
+    }
+
+    @PostMapping("/enrich-descriptions")
+    public ResponseEntity<Map<String, Integer>> enrichDescriptions() {
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.enrichDescriptionsFromWeb()));
+    }
 }

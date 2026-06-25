@@ -64,4 +64,8 @@ public class Article {
     public void updateImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
+
+    public void updateDescription(String description) {
+        this.description = description;
+    }
 }

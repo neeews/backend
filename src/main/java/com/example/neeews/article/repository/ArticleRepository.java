@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ArticleRepository extends JpaRepository<Article, Long> {
 
@@ -33,4 +34,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
            "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Article> searchByKeyword(@Param("q") String q, Pageable pageable);
+
+    List<Article> findByImageUrlIsNull();
 }
