@@ -77,7 +77,7 @@ public class AuthService {
     @Transactional
     public void requestPasswordReset(String email) {
         if (!userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("등록되지 않은 이메일입니다.");
+            return;
         }
         emailVerificationService.sendPasswordResetCode(email);
     }
