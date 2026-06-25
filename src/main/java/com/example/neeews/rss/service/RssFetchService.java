@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +38,53 @@ public class RssFetchService {
         return Arrays.stream(NewsSource.values())
                 .mapToInt(this::fetchSource)
                 .sum();
+    }
+
+    private static final Map<String, String> CATEGORY_MAP = Map.ofEntries(
+        Map.entry("정치일반", "정치"),
+        Map.entry("청와대", "정치"),
+        Map.entry("국방·외교", "정치"),
+        Map.entry("경제 일반", "경제"),
+        Map.entry("금융·재테크", "경제"),
+        Map.entry("산업·통상", "경제"),
+        Map.entry("사회 일반", "사회"),
+        Map.entry("사회일반", "사회"),
+        Map.entry("사건·사고", "사회"),
+        Map.entry("보건·복지", "사회"),
+        Map.entry("노동", "사회"),
+        Map.entry("교육·입시", "사회"),
+        Map.entry("젠더", "사회"),
+        Map.entry("법원·검찰", "사회"),
+        Map.entry("국제 일반", "세계"),
+        Map.entry("미국·중남미", "세계"),
+        Map.entry("중동·아프리카", "세계"),
+        Map.entry("문화 일반", "연예/문화"),
+        Map.entry("책", "연예/문화"),
+        Map.entry("월드컵", "스포츠"),
+        Map.entry("사설", "종합"),
+        Map.entry("인물일반", "종합")
+    );
+
+    public List<Map<String, Object>> getCategoryStats() {
+        return articleRepository.findCategoryStats().stream()
+                .map(row -> Map.<String, Object>of("category", row[0] == null ? "(null)" : row[0], "count", row[1]))
+                .toList();
+    }
+
+    @Transactional
+    public int normalizeCategories() {
+        List<Article> all = articleRepository.findAll();
+        int updated = 0;
+        for (Article article : all) {
+            String current = article.getCategory();
+            String correct = CATEGORY_MAP.getOrDefault(current, article.getSource().getCategory());
+            if (correct != null && !correct.equals(current)) {
+                article.updateCategory(correct);
+                updated++;
+            }
+        }
+        log.info("[카테고리 정규화] 전체 {}건 중 {}건 수정", all.size(), updated);
+        return updated;
     }
 
     @Transactional

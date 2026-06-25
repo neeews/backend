@@ -40,4 +40,14 @@ public class RssController {
     public ResponseEntity<Map<String, Integer>> enrichDescriptions() {
         return ResponseEntity.ok(Map.of("updated", rssFetchService.enrichDescriptionsFromWeb()));
     }
+
+    @PostMapping("/normalize-categories")
+    public ResponseEntity<Map<String, Integer>> normalizeCategories() {
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.normalizeCategories()));
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<Map<String, Object>> categoryStats() {
+        return ResponseEntity.ok(Map.of("categories", rssFetchService.getCategoryStats()));
+    }
 }

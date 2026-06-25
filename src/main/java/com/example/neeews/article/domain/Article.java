@@ -68,4 +68,8 @@ public class Article {
     public void updateDescription(String description) {
         this.description = description;
     }
+
+    public void updateCategory(String category) {
+        this.category = category;
+    }
 }
