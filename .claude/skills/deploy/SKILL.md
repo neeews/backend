@@ -6,6 +6,7 @@ description: Automates deployment to VPS via SSH — clones or pulls the project
 # Deploy
 
 > **중요:** 사용자가 명시적으로 배포를 요청하기 전에는 이 스킬을 실행하지 않는다.
+> **전제:** 사용자가 이미 `git push`를 완료한 상태라고 가정한다. push 여부를 묻거나 확인하지 않는다.
 
 수동 배포 과정을 그대로 자동화한다.
 
