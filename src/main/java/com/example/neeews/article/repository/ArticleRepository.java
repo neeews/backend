@@ -35,8 +35,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
            "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Article> searchByKeyword(@Param("q") String q, Pageable pageable);
 
-    List<Article> findByImageUrlIsNull();
-
     @Query("SELECT a.category, COUNT(a) FROM Article a GROUP BY a.category ORDER BY COUNT(a) DESC")
     List<Object[]> findCategoryStats();
 }
