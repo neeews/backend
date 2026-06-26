@@ -12,6 +12,9 @@ import com.rometools.rome.io.XmlReader;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,6 +40,15 @@ public class RssFetchService {
 
     private static final Set<NewsSource> DEPRECATED_SOURCES = Set.of(
             NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN
+    );
+
+    private static final Map<String, String> CONTENT_SELECTORS = Map.of(
+        "연합뉴스", "article.story-news",
+        "한겨레", "div.article-text",
+        "경향신문", "div.art_body",
+        "한국경제", "div#articletxt",
+        "전자신문", "div.article_txt",
+        "ZDnet코리아", "div#article_body"
     );
 
     @Transactional
@@ -142,6 +155,29 @@ public class RssFetchService {
             log.error("[RSS] {} 수집 실패: {}", source.getDisplayName(), e.getMessage());
         }
         return saved;
+    }
+
+    public String crawlArticleContent(String url, String sourceName) {
+        try {
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (compatible; NeeewsBot/1.0)")
+                    .timeout(10_000)
+                    .get();
+            String selector = CONTENT_SELECTORS.get(sourceName);
+            Element body = selector != null ? doc.selectFirst(selector) : null;
+            if (body == null) body = doc.selectFirst("article");
+            if (body == null) body = doc.selectFirst("main");
+            if (body == null) return null;
+            String text = body.select("p").stream()
+                    .map(Element::text)
+                    .filter(s -> !s.isBlank())
+                    .collect(Collectors.joining("\n\n"));
+            if (text.isBlank()) text = body.text().trim();
+            return text.isEmpty() ? null : text;
+        } catch (Exception e) {
+            log.warn("[본문 크롤링] 실패 url={}: {}", url, e.getMessage());
+            return null;
+        }
     }
 
     public String crawlImageUrl(String url) {

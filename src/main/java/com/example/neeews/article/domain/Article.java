@@ -57,6 +57,10 @@ public class Article {
 
     private LocalDateTime lastViewedAt;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean contentCrawled = false;
+
     @PrePersist
     void onCreate() {
         this.fetchedAt = LocalDateTime.now();
@@ -86,6 +90,11 @@ public class Article {
 
     public void updateDescription(String description) {
         this.description = description;
+        this.contentCrawled = true;
+    }
+
+    public void markContentCrawled() {
+        this.contentCrawled = true;
     }
 
     public void updateCategory(String category) {

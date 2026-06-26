@@ -22,7 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -64,18 +67,46 @@ public class ArticleService {
         article.incrementViewCount();
         article.updateLastViewedAt(LocalDateTime.now());
 
-        if (article.getCachedImagePath() == null) {
-            String externalUrl = article.getImageUrl();
-            if (externalUrl == null) {
-                externalUrl = rssFetchService.crawlImageUrl(article.getLink());
-                if (externalUrl != null) article.updateImageUrl(externalUrl);
+        boolean needsImage = article.getCachedImagePath() == null;
+        boolean needsContent = !article.isContentCrawled();
+
+        if (needsImage || needsContent) {
+            String existingImageUrl = article.getImageUrl();
+            String articleLink = article.getLink();
+            String sourceName = article.getSource().getDisplayName();
+            Long articleId = article.getId();
+
+            AtomicReference<String[]> imageResult = new AtomicReference<>();
+            AtomicReference<String> contentResult = new AtomicReference<>();
+
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+            if (needsImage) {
+                futures.add(CompletableFuture.runAsync(() -> {
+                    String url = existingImageUrl != null
+                            ? existingImageUrl
+                            : rssFetchService.crawlImageUrl(articleLink);
+                    if (url == null) return;
+                    String filename = downloadAndSaveImage(url, articleId);
+                    if (filename != null) imageResult.set(new String[]{url, filename});
+                }));
             }
-            if (externalUrl != null) {
-                String filename = downloadAndSaveImage(externalUrl, article.getId());
-                if (filename != null) {
-                    article.updateCachedImage(baseUrl + "/images/" + filename, filename);
-                }
+
+            if (needsContent) {
+                futures.add(CompletableFuture.runAsync(() -> {
+                    String content = rssFetchService.crawlArticleContent(articleLink, sourceName);
+                    if (content != null) contentResult.set(content);
+                }));
             }
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+            String[] imgRes = imageResult.get();
+            if (imgRes != null) article.updateCachedImage(baseUrl + "/images/" + imgRes[1], imgRes[1]);
+
+            String content = contentResult.get();
+            if (content != null) article.updateDescription(content);
+            else if (needsContent) article.markContentCrawled();
         }
 
         List<ArticleResponse> related = getRelated(article);
