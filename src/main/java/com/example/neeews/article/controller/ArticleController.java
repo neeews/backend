@@ -3,7 +3,6 @@ package com.example.neeews.article.controller;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.service.ArticleService;
-import com.example.neeews.bookmark.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,7 +19,6 @@ import java.util.Map;
 public class ArticleController {
 
     private final ArticleService articleService;
-    private final BookmarkService bookmarkService;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getArticles(
@@ -60,15 +58,4 @@ public class ArticleController {
         return ResponseEntity.ok(articleService.getArticleDetail(id, email));
     }
 
-    @PostMapping("/{id}/bookmark")
-    public ResponseEntity<Void> addBookmark(@PathVariable Long id, Authentication authentication) {
-        bookmarkService.addBookmark(id, authentication.getName());
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/{id}/bookmark")
-    public ResponseEntity<Void> removeBookmark(@PathVariable Long id, Authentication authentication) {
-        bookmarkService.removeBookmark(id, authentication.getName());
-        return ResponseEntity.noContent().build();
-    }
 }

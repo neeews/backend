@@ -96,41 +96,6 @@ public class RssFetchService {
     }
 
     @Transactional
-    public int fillMissingImageUrls() {
-        return Arrays.stream(NewsSource.values())
-                .mapToInt(this::fillImagesFromSource)
-                .sum();
-    }
-
-    @Transactional
-    public int fillImagesFromSource(NewsSource source) {
-        int updated = 0;
-        try {
-            HttpURLConnection conn = openConnection(source.getRssUrl());
-            SyndFeed feed;
-            try (InputStream is = conn.getInputStream()) {
-                feed = new SyndFeedInput().build(new XmlReader(is));
-            }
-            for (SyndEntry entry : feed.getEntries()) {
-                String link = entry.getLink();
-                if (link == null) continue;
-                articleRepository.findByLink(link).ifPresent(article -> {
-                    if (article.getImageUrl() != null) return;
-                    String imageUrl = extractImageUrl(entry);
-                    if (imageUrl != null) {
-                        article.updateImageUrl(imageUrl);
-                    }
-                });
-                updated++;
-            }
-            log.info("[RSS 이미지] {} - {}건 처리", source.getDisplayName(), updated);
-        } catch (Exception e) {
-            log.error("[RSS 이미지] {} 실패: {}", source.getDisplayName(), e.getMessage());
-        }
-        return updated;
-    }
-
-    @Transactional
     public int fetchSource(NewsSource source) {
         int saved = 0;
         try {
@@ -179,6 +144,24 @@ public class RssFetchService {
         return saved;
     }
 
+    public String crawlImageUrl(String url) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+            conn.setConnectTimeout(8_000);
+            conn.setReadTimeout(10_000);
+            conn.setInstanceFollowRedirects(true);
+            try (InputStream is = conn.getInputStream()) {
+                String html = new String(is.readNBytes(32_768), java.nio.charset.StandardCharsets.UTF_8);
+                Matcher og = OG_IMAGE_PATTERN.matcher(html);
+                if (og.find()) return og.group(1) != null ? og.group(1) : og.group(2);
+                Matcher img = IMG_PATTERN.matcher(html);
+                if (img.find()) return img.group(1);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private HttpURLConnection openConnection(String urlStr) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
@@ -206,10 +189,6 @@ public class RssFetchService {
 
     private static final Pattern IMG_PATTERN = Pattern.compile("<img[^>]+src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
     private static final Pattern OG_IMAGE_PATTERN = Pattern.compile("<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']|<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']", Pattern.CASE_INSENSITIVE);
-    private static final Pattern OG_DESC_PATTERN = Pattern.compile("<meta[^>]+property=[\"']og:description[\"'][^>]+content=[\"']([^\"']+)[\"']|<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:description[\"']", Pattern.CASE_INSENSITIVE);
-
-    private record OgMeta(String imageUrl, String description) {}
-
 
     private String extractImageUrl(SyndEntry entry) {
         // 1. <enclosure type="image/...">
@@ -251,77 +230,5 @@ public class RssFetchService {
         } catch (Exception ignored) {}
 
         return null;
-    }
-
-    @Transactional
-    public int fillMissingImageUrlsFromWeb() {
-        List<Article> articles = articleRepository.findByImageUrlIsNull();
-        int imagesFilled = 0;
-        int descsFilled = 0;
-        for (var article : articles) {
-            OgMeta meta = crawlOgMeta(article.getLink());
-            if (meta.imageUrl() != null) {
-                article.updateImageUrl(meta.imageUrl());
-                imagesFilled++;
-            }
-            if (meta.description() != null) {
-                article.updateDescription(meta.description());
-                descsFilled++;
-            }
-            sleep(500);
-        }
-        log.info("[OG 크롤링] 이미지 없는 기사 {}건 → 이미지 {}건, 설명 {}건 채움", articles.size(), imagesFilled, descsFilled);
-        return imagesFilled;
-    }
-
-    @Transactional
-    public int enrichDescriptionsFromWeb() {
-        List<Article> articles = articleRepository.findAll();
-        int updated = 0;
-        for (var article : articles) {
-            OgMeta meta = crawlOgMeta(article.getLink());
-            if (meta.imageUrl() != null && article.getImageUrl() == null) {
-                article.updateImageUrl(meta.imageUrl());
-            }
-            if (meta.description() != null) {
-                article.updateDescription(meta.description());
-                updated++;
-            }
-            sleep(500);
-        }
-        log.info("[OG 크롤링] 전체 기사 {}건 중 {}건 설명 갱신", articles.size(), updated);
-        return updated;
-    }
-
-    private void sleep(long millis) {
-        try { Thread.sleep(millis); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
-
-    private OgMeta crawlOgMeta(String url) {
-        try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
-            conn.setConnectTimeout(8_000);
-            conn.setReadTimeout(10_000);
-            conn.setInstanceFollowRedirects(true);
-            try (InputStream is = conn.getInputStream()) {
-                byte[] buf = is.readNBytes(32_768);
-                String html = new String(buf, java.nio.charset.StandardCharsets.UTF_8);
-
-                String imageUrl = null;
-                Matcher mi = OG_IMAGE_PATTERN.matcher(html);
-                if (mi.find()) imageUrl = mi.group(1) != null ? mi.group(1) : mi.group(2);
-
-                String description = null;
-                Matcher md = OG_DESC_PATTERN.matcher(html);
-                if (md.find()) {
-                    String raw = md.group(1) != null ? md.group(1) : md.group(2);
-                    description = org.springframework.web.util.HtmlUtils.htmlUnescape(raw).trim();
-                }
-
-                return new OgMeta(imageUrl, description);
-            }
-        } catch (Exception ignored) {}
-        return new OgMeta(null, null);
     }
 }

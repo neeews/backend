@@ -5,6 +5,7 @@ import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.bookmark.service.BookmarkService;
+import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +22,7 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
+    private final RssFetchService rssFetchService;
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getBreakingArticles() {
@@ -45,6 +47,10 @@ public class ArticleService {
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
         article.incrementViewCount();
+        if (article.getImageUrl() == null) {
+            String imageUrl = rssFetchService.crawlImageUrl(article.getLink());
+            if (imageUrl != null) article.updateImageUrl(imageUrl);
+        }
         List<ArticleResponse> related = getRelated(article);
         boolean isBookmarked = bookmarkService.isBookmarked(id, email);
         return ArticleDetailResponse.of(article, related, isBookmarked);
