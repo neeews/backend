@@ -7,6 +7,8 @@ import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.bookmark.service.BookmarkService;
 import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,8 +16,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
@@ -23,6 +32,12 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
     private final RssFetchService rssFetchService;
+
+    @Value("${app.image.storage-path}")
+    private String imageStoragePath;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getBreakingArticles() {
@@ -47,13 +62,53 @@ public class ArticleService {
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
         article.incrementViewCount();
-        if (article.getImageUrl() == null) {
-            String imageUrl = rssFetchService.crawlImageUrl(article.getLink());
-            if (imageUrl != null) article.updateImageUrl(imageUrl);
+        article.updateLastViewedAt(LocalDateTime.now());
+
+        if (article.getCachedImagePath() == null) {
+            String externalUrl = article.getImageUrl();
+            if (externalUrl == null) {
+                externalUrl = rssFetchService.crawlImageUrl(article.getLink());
+                if (externalUrl != null) article.updateImageUrl(externalUrl);
+            }
+            if (externalUrl != null) {
+                String filename = downloadAndSaveImage(externalUrl, article.getId());
+                if (filename != null) {
+                    article.updateCachedImage(baseUrl + "/images/" + filename, filename);
+                }
+            }
         }
+
         List<ArticleResponse> related = getRelated(article);
         boolean isBookmarked = bookmarkService.isBookmarked(id, email);
         return ArticleDetailResponse.of(article, related, isBookmarked);
+    }
+
+    private String downloadAndSaveImage(String url, Long articleId) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+            conn.setConnectTimeout(8_000);
+            conn.setReadTimeout(15_000);
+            conn.setInstanceFollowRedirects(true);
+
+            String contentType = conn.getContentType();
+            String ext = "jpg";
+            if (contentType != null) {
+                if (contentType.contains("png")) ext = "png";
+                else if (contentType.contains("gif")) ext = "gif";
+                else if (contentType.contains("webp")) ext = "webp";
+            }
+
+            byte[] imageBytes = conn.getInputStream().readAllBytes();
+            String filename = articleId + "." + ext;
+            Path path = Paths.get(imageStoragePath, filename);
+            Files.createDirectories(path.getParent());
+            Files.write(path, imageBytes);
+            return filename;
+        } catch (Exception e) {
+            log.warn("[이미지 캐시] 다운로드 실패 articleId={}: {}", articleId, e.getMessage());
+            return null;
+        }
     }
 
     @Transactional(readOnly = true)

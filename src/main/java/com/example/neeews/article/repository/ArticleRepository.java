@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,9 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
            "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Article> searchByKeyword(@Param("q") String q, Pageable pageable);
+
+    @Query("SELECT a FROM Article a WHERE a.cachedImagePath IS NOT NULL AND a.lastViewedAt < :threshold")
+    List<Article> findExpiredCachedImages(@Param("threshold") LocalDateTime threshold);
 
     @Query("SELECT a.category, COUNT(a) FROM Article a GROUP BY a.category ORDER BY COUNT(a) DESC")
     List<Object[]> findCategoryStats();

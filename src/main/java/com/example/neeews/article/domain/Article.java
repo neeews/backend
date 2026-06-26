@@ -52,6 +52,11 @@ public class Article {
     @Column(nullable = false, updatable = false)
     private LocalDateTime fetchedAt;
 
+    @Column(length = 500)
+    private String cachedImagePath;
+
+    private LocalDateTime lastViewedAt;
+
     @PrePersist
     void onCreate() {
         this.fetchedAt = LocalDateTime.now();
@@ -63,6 +68,20 @@ public class Article {
 
     public void updateImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public void updateCachedImage(String imageUrl, String cachedImagePath) {
+        this.imageUrl = imageUrl;
+        this.cachedImagePath = cachedImagePath;
+    }
+
+    public void clearCachedImage() {
+        this.imageUrl = null;
+        this.cachedImagePath = null;
+    }
+
+    public void updateLastViewedAt(LocalDateTime lastViewedAt) {
+        this.lastViewedAt = lastViewedAt;
     }
 
     public void updateDescription(String description) {
