@@ -36,6 +36,8 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       BASE_URL: ${BASE_URL}
+    volumes:
+      - /home/ubuntu/images/articles:/app/images/articles
 
 volumes:
   mysql_data:
