@@ -68,7 +68,12 @@ public class ArticleService {
         article.updateLastViewedAt(LocalDateTime.now());
 
         boolean needsImage = article.getCachedImagePath() == null;
+        boolean needsUrlFix = !needsImage && (article.getImageUrl() == null || !article.getImageUrl().startsWith(baseUrl));
         boolean needsContent = !article.isContentCrawled();
+
+        if (needsUrlFix) {
+            article.updateCachedImage(baseUrl + "/images/" + article.getCachedImagePath(), article.getCachedImagePath());
+        }
 
         if (needsImage || needsContent) {
             String existingImageUrl = article.getImageUrl();
