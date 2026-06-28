@@ -137,7 +137,7 @@ find src/main/java/com/example/neeews -type f -name "*.java" \
 ## 서비스 메서드 상세
 
 ### 메서드명(파라미터)
-- **동작**: 무엇을 하는지 구체적으로 설명
+- **동작**: 무엇을 하는지 구체적으로 설명. 조건 분기가 있으면 "A이면 → B, C이면 → D" 형식으로 나열
 - **사용 클래스**: 어떤 Repository/Service를 호출하는지
 - **반환**: 무엇을 반환하는지
 
@@ -179,6 +179,7 @@ find src/main/java/com/example/neeews -type f -name "*.java" \
 - `private` 메서드는 제외, `public` 메서드만 문서화
 - `@Transactional(readOnly = true)` → "읽기 전용 트랜잭션" 표기
 - `@Scheduled` → "스케줄러 (cron: xxx 또는 fixedDelay: xxxms)" 표기
+- 조건 분기 로직이 있으면 **동작** 항목에 "A이면 → B, C이면 → D" 형식으로 반드시 명시
 
 ---
 
