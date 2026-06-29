@@ -184,11 +184,16 @@ public class RssFetchService {
     public String crawlImageUrl(String url) {
         try {
             HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            if (conn instanceof javax.net.ssl.HttpsURLConnection https) {
+                javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
+                ctx.init(null, null, null);
+                https.setSSLSocketFactory(ctx.getSocketFactory());
+            }
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
             conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             conn.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8");
             conn.setConnectTimeout(5_000);
-            conn.setReadTimeout(5_000);
+            conn.setReadTimeout(10_000);
             conn.setInstanceFollowRedirects(true);
             String encoding = conn.getContentEncoding();
             try (InputStream raw = conn.getInputStream()) {
