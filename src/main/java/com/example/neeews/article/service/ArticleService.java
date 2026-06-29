@@ -124,7 +124,9 @@ public class ArticleService {
     private String downloadAndSaveImage(String url, Long articleId) {
         try {
             HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NeeewsBot/1.0)");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+            conn.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
+            conn.setRequestProperty("Referer", url);
             conn.setConnectTimeout(8_000);
             conn.setReadTimeout(15_000);
             conn.setInstanceFollowRedirects(true);
