@@ -16,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -124,9 +126,13 @@ public class ArticleService {
     private String downloadAndSaveImage(String url, Long articleId) {
         try {
             HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            if (conn instanceof HttpsURLConnection https) {
+                SSLContext ctx = SSLContext.getInstance("TLSv1.2");
+                ctx.init(null, null, null);
+                https.setSSLSocketFactory(ctx.getSocketFactory());
+            }
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
             conn.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
-            conn.setRequestProperty("Referer", url);
             conn.setConnectTimeout(8_000);
             conn.setReadTimeout(15_000);
             conn.setInstanceFollowRedirects(true);
