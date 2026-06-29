@@ -183,29 +183,16 @@ public class RssFetchService {
 
     public String crawlImageUrl(String url) {
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            if (conn instanceof javax.net.ssl.HttpsURLConnection https) {
-                javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
-                ctx.init(null, null, null);
-                https.setSSLSocketFactory(ctx.getSocketFactory());
-            }
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
-            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            conn.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8");
-            conn.setRequestProperty("Referer", "https://www.google.com/");
-            conn.setConnectTimeout(8_000);
-            conn.setReadTimeout(30_000);
-            conn.setInstanceFollowRedirects(true);
-            String encoding = conn.getContentEncoding();
-            try (InputStream raw = conn.getInputStream()) {
-                InputStream is = "gzip".equalsIgnoreCase(encoding)
-                        ? new java.util.zip.GZIPInputStream(raw) : raw;
-                String html = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                Matcher og = OG_IMAGE_PATTERN.matcher(html);
-                if (og.find()) return og.group(1) != null ? og.group(1) : og.group(2);
-                Matcher img = IMG_PATTERN.matcher(html);
-                if (img.find()) return img.group(1);
-            }
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+                    .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8")
+                    .referrer("https://www.google.com/")
+                    .timeout(15_000)
+                    .get();
+            Element og = doc.selectFirst("meta[property=og:image]");
+            if (og != null) return og.attr("content");
+            Element img = doc.selectFirst("img[src]");
+            if (img != null) return img.attr("abs:src");
         } catch (Exception e) {
             log.warn("[이미지 크롤링] 실패 url={}: {}", url, e.getMessage());
         }
@@ -238,7 +225,6 @@ public class RssFetchService {
     }
 
     private static final Pattern IMG_PATTERN = Pattern.compile("<img[^>]+src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
-    private static final Pattern OG_IMAGE_PATTERN = Pattern.compile("<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']|<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']", Pattern.CASE_INSENSITIVE);
 
     private String extractImageUrl(SyndEntry entry) {
         // 1. <enclosure type="image/...">
