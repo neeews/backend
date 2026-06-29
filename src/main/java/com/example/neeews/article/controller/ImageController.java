@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -91,7 +90,7 @@ public class ImageController {
     @GetMapping("/proxy")
     public ResponseEntity<byte[]> proxyImage(
             @RequestParam String url,
-            @RequestParam(required = false) Integer w) throws Exception {
+            @RequestParam(required = false) Integer w) {
 
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             return ResponseEntity.badRequest().build();
@@ -100,57 +99,66 @@ public class ImageController {
             return ResponseEntity.badRequest().build();
         }
 
-        String hash = urlHash(url);
-        Path proxyDir = Paths.get(imageStoragePath, "proxy");
-        CacheControl cacheControl = CacheControl.maxAge(7, TimeUnit.DAYS);
+        try {
+            String hash = urlHash(url);
+            Path proxyDir = Paths.get(imageStoragePath, "proxy");
+            CacheControl cacheControl = CacheControl.maxAge(7, TimeUnit.DAYS);
 
-        // 리사이즈 캐시 우선 확인
-        if (w != null) {
-            Path resized = Paths.get(imageStoragePath, "cache", String.valueOf(w), hash + ".jpg");
-            if (Files.exists(resized)) {
+            // 리사이즈 캐시 우선 확인
+            if (w != null) {
+                Path resized = Paths.get(imageStoragePath, "cache", String.valueOf(w), hash + ".jpg");
+                if (Files.exists(resized)) {
+                    return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
+                            .cacheControl(cacheControl).body(Files.readAllBytes(resized));
+                }
+            }
+
+            // 원본 캐시 확인
+            Path originalFile = null;
+            String ext = null;
+            for (String candidate : new String[]{"jpg", "png", "webp", "gif"}) {
+                Path file = proxyDir.resolve(hash + "." + candidate);
+                if (Files.exists(file)) {
+                    originalFile = file;
+                    ext = candidate;
+                    break;
+                }
+            }
+
+            // 원본 없으면 다운로드
+            if (originalFile == null) {
+                DownloadResult result = downloadImage(url);
+                if (result == null) {
+                    log.warn("[이미지 프록시] 다운로드 실패, 502 반환: {}", url);
+                    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+                }
+                ext = result.ext();
+                Files.createDirectories(proxyDir);
+                originalFile = proxyDir.resolve(hash + "." + ext);
+                Files.write(originalFile, result.bytes());
+            }
+
+            boolean resizable = !"webp".equals(ext) && !"gif".equals(ext);
+
+            if (w != null && resizable) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                Thumbnails.of(originalFile.toFile())
+                        .width(w).keepAspectRatio(true).outputQuality(0.85).toOutputStream(baos);
+                byte[] resizedBytes = baos.toByteArray();
+                Path cacheDir = Paths.get(imageStoragePath, "cache", String.valueOf(w));
+                Files.createDirectories(cacheDir);
+                Files.write(cacheDir.resolve(hash + ".jpg"), resizedBytes);
                 return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
-                        .cacheControl(cacheControl).body(Files.readAllBytes(resized));
+                        .cacheControl(cacheControl).body(resizedBytes);
             }
+
+            return ResponseEntity.ok().contentType(resolveMediaType("x." + ext))
+                    .cacheControl(cacheControl).body(Files.readAllBytes(originalFile));
+
+        } catch (Exception e) {
+            log.error("[이미지 프록시] 처리 중 오류 url={}: {}", url, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        // 원본 캐시 확인
-        byte[] imageBytes = null;
-        String ext = null;
-        for (String candidate : new String[]{"jpg", "png", "webp", "gif"}) {
-            Path file = proxyDir.resolve(hash + "." + candidate);
-            if (Files.exists(file)) {
-                imageBytes = Files.readAllBytes(file);
-                ext = candidate;
-                break;
-            }
-        }
-
-        // 원본 없으면 다운로드
-        if (imageBytes == null) {
-            DownloadResult result = downloadImage(url);
-            if (result == null) return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
-            imageBytes = result.bytes();
-            ext = result.ext();
-            Files.createDirectories(proxyDir);
-            Files.write(proxyDir.resolve(hash + "." + ext), imageBytes);
-        }
-
-        boolean resizable = !"webp".equals(ext) && !"gif".equals(ext);
-
-        if (w != null && resizable) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Thumbnails.of(new ByteArrayInputStream(imageBytes))
-                    .width(w).keepAspectRatio(true).outputQuality(0.85).toOutputStream(baos);
-            byte[] resizedBytes = baos.toByteArray();
-            Path cacheDir = Paths.get(imageStoragePath, "cache", String.valueOf(w));
-            Files.createDirectories(cacheDir);
-            Files.write(cacheDir.resolve(hash + ".jpg"), resizedBytes);
-            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
-                    .cacheControl(cacheControl).body(resizedBytes);
-        }
-
-        return ResponseEntity.ok().contentType(resolveMediaType("x." + ext))
-                .cacheControl(cacheControl).body(imageBytes);
     }
 
     private record DownloadResult(byte[] bytes, String ext) {}
