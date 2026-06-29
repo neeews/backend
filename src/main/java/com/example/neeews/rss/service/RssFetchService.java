@@ -183,7 +183,10 @@ public class RssFetchService {
 
     public String crawlImageUrl(String url) {
         try {
+            javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
+            ctx.init(null, null, null);
             Document doc = Jsoup.connect(url)
+                    .sslSocketFactory(ctx.getSocketFactory())
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
                     .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8")
                     .referrer("https://www.google.com/")
