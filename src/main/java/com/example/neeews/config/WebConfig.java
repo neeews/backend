@@ -16,7 +16,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String absolutePath = Paths.get(imageStoragePath).toAbsolutePath().toString();
-        registry.addResourceHandler("/images/**")
+        registry.addResourceHandler("/api/images/**")
                 .addResourceLocations("file:" + absolutePath + "/");
     }
 }
