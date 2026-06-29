@@ -40,7 +40,8 @@ public class RssFetchService {
     private final ArticleRepository articleRepository;
 
     private static final Set<NewsSource> DEPRECATED_SOURCES = Set.of(
-            NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN
+            NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN,
+            NewsSource.YONHAP_IT
     );
 
     private static final Map<String, String> CONTENT_SELECTORS = Map.of(
