@@ -2,8 +2,11 @@ package com.example.neeews.auth.service;
 
 import com.example.neeews.auth.domain.RefreshToken;
 import com.example.neeews.auth.domain.User;
-import com.example.neeews.auth.dto.request.*;
-import com.example.neeews.auth.dto.response.*;
+import com.example.neeews.auth.dto.request.LoginRequest;
+import com.example.neeews.auth.dto.request.PasswordResetRequest;
+import com.example.neeews.auth.dto.request.SignupRequest;
+import com.example.neeews.auth.dto.response.TokenResponse;
+import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.auth.repository.RefreshTokenRepository;
 import com.example.neeews.auth.repository.UserRepository;
 import com.example.neeews.security.JwtUtil;
@@ -84,8 +87,10 @@ public class AuthService {
     }
 
     @Transactional
-    public void confirmPasswordReset(PasswordResetConfirmRequest request) {
-        emailVerificationService.verifyCodeDirect(request.getEmail(), request.getCode());
+    public void resetPassword(PasswordResetRequest request) {
+        if (!emailVerificationService.isVerified(request.getEmail())) {
+            throw new IllegalArgumentException("이메일 인증이 완료되지 않았습니다.");
+        }
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));

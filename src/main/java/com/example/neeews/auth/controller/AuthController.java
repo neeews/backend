@@ -1,7 +1,13 @@
 package com.example.neeews.auth.controller;
 
-import com.example.neeews.auth.dto.request.*;
-import com.example.neeews.auth.dto.response.*;
+import com.example.neeews.auth.dto.request.EmailSendRequest;
+import com.example.neeews.auth.dto.request.EmailVerifyRequest;
+import com.example.neeews.auth.dto.request.LoginRequest;
+import com.example.neeews.auth.dto.request.PasswordResetRequest;
+import com.example.neeews.auth.dto.request.RefreshRequest;
+import com.example.neeews.auth.dto.request.SignupRequest;
+import com.example.neeews.auth.dto.response.TokenResponse;
+import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.auth.service.AuthService;
 import com.example.neeews.auth.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
@@ -50,15 +56,21 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/password/reset/request")
-    public ResponseEntity<Void> requestPasswordReset(@RequestBody EmailSendRequest request) {
+    @PostMapping("/password/send-code")
+    public ResponseEntity<Void> sendPasswordCode(@RequestBody EmailSendRequest request) {
         authService.requestPasswordReset(request.getEmail());
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/password/reset/confirm")
-    public ResponseEntity<Void> confirmPasswordReset(@RequestBody PasswordResetConfirmRequest request) {
-        authService.confirmPasswordReset(request);
+    @PostMapping("/password/verify-code")
+    public ResponseEntity<Void> verifyPasswordCode(@RequestBody EmailVerifyRequest request) {
+        emailVerificationService.verifyCode(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/password/reset")
+    public ResponseEntity<Void> resetPassword(@RequestBody PasswordResetRequest request) {
+        authService.resetPassword(request);
         return ResponseEntity.ok().build();
     }
 
