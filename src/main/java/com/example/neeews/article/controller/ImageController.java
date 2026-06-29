@@ -33,9 +33,6 @@ public class ImageController {
     @Value("${app.image.storage-path}")
     private String imageStoragePath;
 
-    @Value("${app.base-url}")
-    private String baseUrl;
-
     @GetMapping("/{filename}")
     public ResponseEntity<byte[]> getImage(
             @PathVariable String filename,
@@ -103,35 +100,6 @@ public class ImageController {
         }
 
         try {
-            // 자기 서버 URL이면 파일시스템에서 직접 서빙
-            String localImagePrefix = baseUrl + "/api/images/";
-            if (url.startsWith(localImagePrefix)) {
-                String rest = url.substring(localImagePrefix.length()).split("\\?")[0];
-                if (!rest.contains("..") && !rest.contains("/")) {
-                    Path localFile = Paths.get(imageStoragePath, rest);
-                    if (Files.exists(localFile)) {
-                        String localExt = rest.contains(".") ? rest.substring(rest.lastIndexOf('.') + 1) : "jpg";
-                        MediaType localType = resolveMediaType("x." + localExt);
-                        CacheControl cc = CacheControl.maxAge(7, TimeUnit.DAYS);
-                        boolean localResizable = !"webp".equals(localExt) && !"gif".equals(localExt);
-                        if (w != null && localResizable) {
-                            Path cacheDir = Paths.get(imageStoragePath, "cache", String.valueOf(w));
-                            Path cached = cacheDir.resolve(rest);
-                            if (Files.exists(cached)) {
-                                return ResponseEntity.ok().contentType(localType).cacheControl(cc).body(Files.readAllBytes(cached));
-                            }
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            Thumbnails.of(localFile.toFile()).width(w).keepAspectRatio(true).outputQuality(0.85).toOutputStream(baos);
-                            byte[] resized = baos.toByteArray();
-                            Files.createDirectories(cacheDir);
-                            Files.write(cached, resized);
-                            return ResponseEntity.ok().contentType(localType).cacheControl(cc).body(resized);
-                        }
-                        return ResponseEntity.ok().contentType(localType).cacheControl(cc).body(Files.readAllBytes(localFile));
-                    }
-                }
-            }
-
             String hash = urlHash(url);
             Path proxyDir = Paths.get(imageStoragePath, "proxy");
             CacheControl cacheControl = CacheControl.maxAge(7, TimeUnit.DAYS);
