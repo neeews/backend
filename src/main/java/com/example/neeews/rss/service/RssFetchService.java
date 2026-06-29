@@ -282,6 +282,19 @@ public class RssFetchService {
             }
         } catch (Exception ignored) {}
 
+        // 5. ContentModule 파싱 실패 시 foreignMarkup에서 content:encoded 직접 탐색
+        try {
+            for (var el : entry.getForeignMarkup()) {
+                if ("encoded".equals(el.getName())) {
+                    String text = el.getText();
+                    if (text != null) {
+                        Matcher m = IMG_PATTERN.matcher(text);
+                        if (m.find()) return m.group(1);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
         return null;
     }
 }
