@@ -68,7 +68,8 @@ public class ArticleService {
         article.updateLastViewedAt(LocalDateTime.now());
 
         boolean needsImage = article.getCachedImagePath() == null;
-        boolean needsUrlFix = !needsImage && (article.getImageUrl() == null || !article.getImageUrl().startsWith(baseUrl));
+        boolean needsUrlFix = !needsImage && !"none".equals(article.getCachedImagePath())
+                && (article.getImageUrl() == null || !article.getImageUrl().startsWith(baseUrl));
         boolean needsContent = !article.isContentCrawled();
 
         if (needsUrlFix) {
@@ -108,6 +109,7 @@ public class ArticleService {
 
             String[] imgRes = imageResult.get();
             if (imgRes != null) article.updateCachedImage(baseUrl + "/images/" + imgRes[1], imgRes[1]);
+            else if (needsImage) article.updateCachedImage(null, "none"); // 이미지 없음으로 확정, 재시도 방지
 
             String content = contentResult.get();
             if (content != null) article.updateDescription(content);
