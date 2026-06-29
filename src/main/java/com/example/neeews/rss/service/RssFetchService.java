@@ -189,14 +189,23 @@ public class RssFetchService {
             conn.setConnectTimeout(8_000);
             conn.setReadTimeout(10_000);
             conn.setInstanceFollowRedirects(true);
-            try (InputStream is = conn.getInputStream()) {
-                String html = new String(is.readNBytes(32_768), java.nio.charset.StandardCharsets.UTF_8);
+            int status = conn.getResponseCode();
+            String encoding = conn.getContentEncoding();
+            log.info("[이미지 크롤링] url={} status={} encoding={}", url, status, encoding);
+            try (InputStream raw = conn.getInputStream()) {
+                InputStream is = "gzip".equalsIgnoreCase(encoding)
+                        ? new java.util.zip.GZIPInputStream(raw) : raw;
+                String html = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                log.info("[이미지 크롤링] html길이={}", html.length());
                 Matcher og = OG_IMAGE_PATTERN.matcher(html);
                 if (og.find()) return og.group(1) != null ? og.group(1) : og.group(2);
                 Matcher img = IMG_PATTERN.matcher(html);
                 if (img.find()) return img.group(1);
+                log.warn("[이미지 크롤링] og:image 없음 url={}", url);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[이미지 크롤링] 실패 url={}: {}", url, e.getMessage());
+        }
         return null;
     }
 
