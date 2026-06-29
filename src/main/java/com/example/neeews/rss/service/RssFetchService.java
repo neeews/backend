@@ -3,7 +3,6 @@ package com.example.neeews.rss.service;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.domain.NewsSource;
-import com.rometools.modules.content.ContentModule;
 import com.rometools.modules.mediarss.MediaEntryModule;
 import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndEntry;
@@ -275,10 +274,9 @@ public class RssFetchService {
 
         // 4. <content:encoded>에서 <img src="..."> 추출 (ZDnet 등)
         try {
-            ContentModule content = (ContentModule) entry.getModule(ContentModule.URI);
-            if (content != null && content.getEncodedStrings() != null) {
-                for (String encoded : content.getEncodedStrings()) {
-                    Matcher m = IMG_PATTERN.matcher(encoded);
+            for (var syndContent : entry.getContents()) {
+                if (syndContent.getValue() != null) {
+                    Matcher m = IMG_PATTERN.matcher(syndContent.getValue());
                     if (m.find()) return m.group(1);
                 }
             }
