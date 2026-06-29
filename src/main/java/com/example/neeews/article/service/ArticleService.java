@@ -71,11 +71,11 @@ public class ArticleService {
 
         boolean needsImage = article.getCachedImagePath() == null;
         boolean needsUrlFix = !needsImage && !"none".equals(article.getCachedImagePath())
-                && (article.getImageUrl() == null || !article.getImageUrl().contains("/api/images/"));
+                && (article.getImageUrl() == null || !article.getImageUrl().contains("?w=800"));
         boolean needsContent = !article.isContentCrawled();
 
         if (needsUrlFix) {
-            article.updateCachedImage(baseUrl + "/api/images/" +article.getCachedImagePath(), article.getCachedImagePath());
+            article.updateCachedImage(baseUrl + "/api/images/" + article.getCachedImagePath() + "?w=800", article.getCachedImagePath());
         }
 
         if (needsImage || needsContent) {
@@ -110,7 +110,7 @@ public class ArticleService {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
             String[] imgRes = imageResult.get();
-            if (imgRes != null) article.updateCachedImage(baseUrl + "/api/images/" +imgRes[1], imgRes[1]);
+            if (imgRes != null) article.updateCachedImage(baseUrl + "/api/images/" + imgRes[1] + "?w=800", imgRes[1]);
             else if (needsImage) article.updateCachedImage(null, "none"); // 이미지 없음으로 확정, 재시도 방지
 
             String content = contentResult.get();
