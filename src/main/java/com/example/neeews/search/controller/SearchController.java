@@ -26,11 +26,12 @@ public class SearchController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> search(
             @RequestParam String q,
+            @RequestParam(required = false) String filter,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication
     ) {
-        Page<ArticleResponse> result = articleService.searchArticles(q, PageRequest.of(page - 1, limit));
+        Page<ArticleResponse> result = articleService.searchArticles(q, filter, PageRequest.of(page - 1, limit));
         if (authentication != null) {
             searchHistoryService.save(authentication.getName(), q);
         }

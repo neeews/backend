@@ -5,6 +5,7 @@ import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.bookmark.service.BookmarkService;
+import com.example.neeews.rss.domain.NewsSource;
 import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -167,8 +168,18 @@ public class ArticleService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ArticleResponse> searchArticles(String q, Pageable pageable) {
-        return articleRepository.searchByKeyword(q, pageable).map(ArticleResponse::from);
+    public Page<ArticleResponse> searchArticles(String q, String filter, Pageable pageable) {
+        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        if (filter != null && !filter.isBlank()) {
+            List<NewsSource> matchedSources = Arrays.stream(NewsSource.values())
+                    .filter(s -> s.getDisplayName().equals(filter.trim()))
+                    .toList();
+            if (!matchedSources.isEmpty()) {
+                return articleRepository.searchByKeywordAndSources(q, matchedSources, unsorted).map(ArticleResponse::from);
+            }
+            return articleRepository.searchByKeywordAndCategory(q, filter.trim(), unsorted).map(ArticleResponse::from);
+        }
+        return articleRepository.searchByKeyword(q, unsorted).map(ArticleResponse::from);
     }
 
     private List<ArticleResponse> getRelated(Article article) {

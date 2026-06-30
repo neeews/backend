@@ -31,10 +31,32 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("SELECT a FROM Article a WHERE (:category IS NULL OR a.category = :category)")
     Page<Article> findByCategoryOptional(@Param("category") String category, Pageable pageable);
 
-    @Query("SELECT a FROM Article a WHERE " +
-           "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))")
+    @Query(value = "SELECT a FROM Article a WHERE " +
+                  "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+                  "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                  "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.publishedAt DESC",
+           countQuery = "SELECT COUNT(a) FROM Article a WHERE " +
+                        "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+                        "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Article> searchByKeyword(@Param("q") String q, Pageable pageable);
+
+    @Query(value = "SELECT a FROM Article a WHERE " +
+                  "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                  "AND a.source IN :sources " +
+                  "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.publishedAt DESC",
+           countQuery = "SELECT COUNT(a) FROM Article a WHERE " +
+                        "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                        "AND a.source IN :sources")
+    Page<Article> searchByKeywordAndSources(@Param("q") String q, @Param("sources") List<NewsSource> sources, Pageable pageable);
+
+    @Query(value = "SELECT a FROM Article a WHERE " +
+                  "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                  "AND a.category = :category " +
+                  "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.publishedAt DESC",
+           countQuery = "SELECT COUNT(a) FROM Article a WHERE " +
+                        "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                        "AND a.category = :category")
+    Page<Article> searchByKeywordAndCategory(@Param("q") String q, @Param("category") String category, Pageable pageable);
 
     @Query("SELECT a FROM Article a WHERE a.cachedImagePath IS NOT NULL AND a.lastViewedAt < :threshold")
     List<Article> findExpiredCachedImages(@Param("threshold") LocalDateTime threshold);
