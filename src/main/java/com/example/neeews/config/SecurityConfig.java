@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/keywords/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/news/**").permitAll()
                         .requestMatchers("/rss/**").permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
