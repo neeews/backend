@@ -50,7 +50,7 @@ public class RssFetchService {
         "경향신문", "div.art_body",
         "한국경제", "div#articletxt",
         "전자신문", "div.article_txt",
-        "ZDnet코리아", "div#article_body"
+        "ZDnet코리아", "div#articleBody"
     );
 
     @Transactional
