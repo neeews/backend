@@ -1,5 +1,6 @@
 package com.example.neeews.auth.dto.response;
 
+import com.example.neeews.auth.domain.Role;
 import com.example.neeews.auth.domain.User;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,6 +13,7 @@ public class UserResponse {
     private Long id;
     private String name;
     private String email;
+    private Role role;
     private LocalDateTime createdAt;
 
     public static UserResponse from(User user) {
@@ -19,6 +21,7 @@ public class UserResponse {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
