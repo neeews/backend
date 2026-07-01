@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -23,7 +24,8 @@ public class TrendingKeywordService {
 
     private static final Set<String> STOP_WORDS = Set.of(
             "기자", "뉴스", "보도", "기사", "관련", "이번", "지난", "오늘", "내일", "올해",
-            "대해", "통해", "위해", "것으로", "경우", "사실", "가운데", "현재", "이후", "당시"
+            "대해", "통해", "위해", "것으로", "경우", "사실", "가운데", "현재", "이후", "당시",
+            "밝혔다", "있다", "했다", "된다", "이다"
     );
 
     private final Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
@@ -63,7 +65,9 @@ public class TrendingKeywordService {
         ).getContent();
 
         Map<String, Long> wordCount = recentArticles.stream()
-                .map(a -> a.getTitle() + " " + (a.getDescription() != null ? a.getDescription().replaceAll("<[^>]*>", "") : ""))
+                .map(a -> a.getTitle() + " " + (a.getDescription() != null
+                        ? HtmlUtils.htmlUnescape(a.getDescription().replaceAll("<[^>]*>", ""))
+                        : ""))
                 .flatMap(text -> komoran.analyze(text).getNouns().stream())
                 .filter(w -> w.length() >= 2)
                 .filter(w -> !STOP_WORDS.contains(w))
