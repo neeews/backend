@@ -5,6 +5,7 @@ import com.example.neeews.keyword.service.TrendingKeywordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,5 +24,11 @@ public class KeywordController {
         List<TrendingKeywordResponse> keywords = trendingKeywordService.getTodayKeywords()
                 .stream().map(TrendingKeywordResponse::from).toList();
         return ResponseEntity.ok(Map.of("keywords", keywords));
+    }
+
+    @PostMapping("/trending/refresh")
+    public ResponseEntity<Void> refreshTrending() {
+        trendingKeywordService.refreshTrendingKeywords();
+        return ResponseEntity.ok().build();
     }
 }
