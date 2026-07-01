@@ -169,18 +169,29 @@ public class ArticleService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ArticleResponse> searchArticles(String q, String filter, Pageable pageable) {
+    public Page<ArticleResponse> searchArticles(String q, List<String> categories, List<String> sourceNames, Pageable pageable) {
         Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        if (filter != null && !filter.isBlank()) {
-            List<NewsSource> matchedSources = Arrays.stream(NewsSource.values())
-                    .filter(s -> s.getDisplayName().equals(filter.trim()))
-                    .toList();
-            if (!matchedSources.isEmpty()) {
-                return articleRepository.searchByKeywordAndSources(q, matchedSources, unsorted).map(ArticleResponse::from);
-            }
-            return articleRepository.searchByKeywordAndCategory(q, filter.trim(), unsorted).map(ArticleResponse::from);
+        boolean hasCategories = categories != null && !categories.isEmpty();
+        boolean hasSources = sourceNames != null && !sourceNames.isEmpty();
+
+        if (hasCategories && hasSources) {
+            List<NewsSource> sources = resolveNewsSources(sourceNames);
+            return articleRepository.searchByKeywordAndSourcesAndCategories(q, sources, categories, unsorted).map(ArticleResponse::from);
+        }
+        if (hasCategories) {
+            return articleRepository.searchByKeywordAndCategories(q, categories, unsorted).map(ArticleResponse::from);
+        }
+        if (hasSources) {
+            List<NewsSource> sources = resolveNewsSources(sourceNames);
+            return articleRepository.searchByKeywordAndSources(q, sources, unsorted).map(ArticleResponse::from);
         }
         return articleRepository.searchByKeyword(q, unsorted).map(ArticleResponse::from);
+    }
+
+    private List<NewsSource> resolveNewsSources(List<String> displayNames) {
+        return Arrays.stream(NewsSource.values())
+                .filter(s -> displayNames.contains(s.getDisplayName()))
+                .toList();
     }
 
     private List<ArticleResponse> getRelated(Article article) {

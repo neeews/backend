@@ -51,12 +51,21 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     @Query(value = "SELECT a FROM Article a WHERE " +
                   "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
-                  "AND a.category = :category " +
+                  "AND a.category IN :categories " +
                   "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.publishedAt DESC",
            countQuery = "SELECT COUNT(a) FROM Article a WHERE " +
                         "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
-                        "AND a.category = :category")
-    Page<Article> searchByKeywordAndCategory(@Param("q") String q, @Param("category") String category, Pageable pageable);
+                        "AND a.category IN :categories")
+    Page<Article> searchByKeywordAndCategories(@Param("q") String q, @Param("categories") List<String> categories, Pageable pageable);
+
+    @Query(value = "SELECT a FROM Article a WHERE " +
+                  "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                  "AND a.source IN :sources AND a.category IN :categories " +
+                  "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.publishedAt DESC",
+           countQuery = "SELECT COUNT(a) FROM Article a WHERE " +
+                        "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                        "AND a.source IN :sources AND a.category IN :categories")
+    Page<Article> searchByKeywordAndSourcesAndCategories(@Param("q") String q, @Param("sources") List<NewsSource> sources, @Param("categories") List<String> categories, Pageable pageable);
 
     @Query("SELECT a FROM Article a WHERE a.cachedImagePath IS NOT NULL AND a.lastViewedAt < :threshold")
     List<Article> findExpiredCachedImages(@Param("threshold") LocalDateTime threshold);

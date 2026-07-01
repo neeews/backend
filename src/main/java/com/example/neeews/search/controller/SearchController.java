@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -26,12 +27,13 @@ public class SearchController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> search(
             @RequestParam String q,
-            @RequestParam(required = false) String filter,
+            @RequestParam(required = false) List<String> categories,
+            @RequestParam(required = false) List<String> sources,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication
     ) {
-        Page<ArticleResponse> result = articleService.searchArticles(q, filter, PageRequest.of(page - 1, limit));
+        Page<ArticleResponse> result = articleService.searchArticles(q, categories, sources, PageRequest.of(page - 1, limit));
         if (authentication != null) {
             searchHistoryService.save(authentication.getName(), q);
         }
