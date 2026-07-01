@@ -1,12 +1,13 @@
 ---
 name: bdocs
-description: 백엔드 소스코드를 읽어 Notion "기능 정리 > 백엔드" 페이지에 도메인별 상세 문서를 생성하고, 엔티티 DB를 별도로 만들어 각 필드 정보를 정리한다.
+description: 백엔드 소스코드를 읽어 Notion "기능 정리 > 백엔드" 페이지에 도메인별로 사용 기술/오픈소스와 작동 방식을 간단히 정리한다.
 ---
 
 # bdocs — 백엔드 코드 문서화
 
 백엔드 소스코드를 **전체 읽은 뒤** Notion "🪛 기능 정리 > 백엔드" 하위에 도메인별 페이지를 생성한다.
-각 페이지에는 **클래스 목록 · 메서드 시그니처 · 매개변수 · 반환타입 · 전체 코드**가 포함된다.
+각 페이지에는 **이 도메인이 무엇을 하는지 · 어떤 오픈소스/기술을 썼는지 · 어떻게 동작하는지**만 간단히 담는다.
+클래스 목록, 메서드 시그니처, 매개변수 표, 전체 코드는 넣지 않는다.
 
 ---
 
@@ -129,10 +130,10 @@ src/main/java/com/example/neeews/exception/GlobalExceptionHandler.java
 
 ---
 
-### 2단계 — 도메인별 소스 전체 읽기
+### 2단계 — 도메인별 소스 읽기
 
-도메인 순서대로 `Read` 도구로 **위 목록의 모든 파일**을 읽는다.
-한 도메인 안의 파일을 모두 읽은 뒤 바로 3단계(Notion 페이지 생성)를 진행하고, 다음 도메인으로 넘어간다.
+도메인 순서대로 `Read` 도구로 **위 목록의 파일**을 읽고, 이 도메인이 어떤 오픈소스/기술을 쓰는지, 어떤 흐름으로 동작하는지 파악한다.
+한 도메인을 다 읽은 뒤 바로 3단계(Notion 페이지 생성)를 진행하고, 다음 도메인으로 넘어간다.
 
 ---
 
@@ -152,126 +153,18 @@ src/main/java/com/example/neeews/exception/GlobalExceptionHandler.java
 
 #### 본문 형식
 
-각 클래스를 아래 구조로 작성한다. **메서드 설명과 해당 코드를 항상 한 블록에 붙여서** 작성한다.
-
 ```
 ## 개요
 도메인의 역할을 1~2문장으로 설명한다.
 
----
+## 사용 기술 / 오픈소스
+- 이 도메인에서 쓰인 라이브러리·프레임워크 기능·오픈소스를 항목별로 나열하고, 어디에 왜 쓰였는지 한 줄로 덧붙인다.
+  (예: KOMORAN — 트렌딩 키워드 추출을 위한 한국어 형태소 분석기)
+- 특별한 오픈소스/외부 기술이 없으면 "Spring Data JPA 기본 CRUD만 사용" 처럼 간단히 적는다.
 
-## `ClassName`
-`com.example.neeews.domain.layer`
-`@RestController` `@RequestMapping("/path")` 등 클래스 어노테이션
-**의존성:** Dep1, Dep2
-
----
-
-### `methodName()` — GET /path (컨트롤러면 HTTP 메서드+경로, 서비스면 역할 한 줄)
-
-한 줄 설명.
-
-| 매개변수 | 타입 | 필수 | 설명 |
-|---------|------|------|------|
-| id | Long | ✓ | 기사 ID (@PathVariable) |
-| sort | String | - | 정렬 기준, 기본값 latest |
-
-**반환** `ResponseEntity<ArticleResponse>` — 설명
-
-```java
-@GetMapping("/{id}")
-public ResponseEntity<ArticleResponse> methodName(
-        @PathVariable Long id,
-        @RequestParam(defaultValue = "latest") String sort) {
-    return ResponseEntity.ok(service.get(id, sort));
-}
-```
-
-(private 메서드도 동일하게 작성, 단 매개변수 표는 생략 가능)
-
----
-
-## `EntityName` — `table_name` 테이블 (엔티티는 이 형식)
-
-| 필드 | 타입 | 컬럼 | 제약 | 설명 |
-|-----|------|------|------|------|
-| id | Long | id | PK, AUTO | 기본 키 |
-
-```java
-// 엔티티 전체 코드
-```
-
----
-
-## `DtoName` (DTO는 이 형식)
-
-| 필드 | 타입 | 제약 | 설명 |
-|-----|------|------|------|
-| email | String | @NotBlank | 이메일 |
-
-```java
-// DTO 전체 코드
-```
-```
-
----
-
-### 4단계 — 엔티티 필드 요약 페이지 생성
-
-모든 `@Entity` 클래스를 읽은 뒤, BACKEND_PAGE_ID 하위에 **"엔티티 DB 정리"** 페이지를 별도로 생성한다.
-
-```json
-{
-  "parent": { "type": "page_id", "page_id": "<BACKEND_PAGE_ID>" },
-  "pages": [{
-    "title": "엔티티 DB 정리",
-    "content": "<아래 형식>"
-  }]
-}
-```
-
-#### 엔티티 DB 정리 본문 형식
-
-```
-## 엔티티 목록
-
-| 엔티티명 | 테이블명 | 도메인 |
-|---------|---------|-------|
-| Article | article | article |
-| User    | user    | auth   |
-| ...     | ...     | ...   |
-
----
-
-## 엔티티 상세
-
-### `엔티티명` (`테이블명`)
-
-| 필드명 | Java 타입 | 컬럼명 | 제약조건 | 설명 |
-|-------|---------|-------|---------|------|
-| id    | Long    | id    | PK, AUTO | 기본 키 |
-| title | String  | title | NOT NULL | 기사 제목 |
-| ...   | ...     | ...   | ...      | ...  |
-
-연관관계:
-- `@ManyToOne` User user — 기사를 등록한 사용자
-- `@OneToMany` List<Bookmark> bookmarks — 이 기사의 북마크 목록
-```
-
----
-
-## 엔티티 파일 목록 (4단계 전용)
-
-```
-src/main/java/com/example/neeews/article/domain/Article.java
-src/main/java/com/example/neeews/auth/domain/User.java
-src/main/java/com/example/neeews/auth/domain/EmailVerification.java
-src/main/java/com/example/neeews/auth/domain/RefreshToken.java
-src/main/java/com/example/neeews/bookmark/domain/Bookmark.java
-src/main/java/com/example/neeews/keyword/domain/TrendingKeyword.java
-src/main/java/com/example/neeews/rss/domain/NewsSource.java
-src/main/java/com/example/neeews/search/domain/SearchHistory.java
-src/main/java/com/example/neeews/suggestion/domain/Suggestion.java
+## 작동 방식
+- 요청이 들어와서 응답이 나가기까지의 흐름을 3~5줄로 설명한다.
+- 핵심 클래스/메서드 이름은 언급해도 되지만 시그니처·매개변수 표·전체 코드는 넣지 않는다.
 ```
 
 ---
@@ -296,7 +189,6 @@ src/main/java/com/example/neeews/suggestion/domain/Suggestion.java
 - Security — URL
 - Config — URL
 - Exception — URL
-- 엔티티 DB 정리 — URL
 ```
 
 ---
@@ -305,6 +197,5 @@ src/main/java/com/example/neeews/suggestion/domain/Suggestion.java
 
 - 이미 "백엔드" 페이지가 있으면 새로 만들지 말고 기존 ID를 사용한다.
 - 같은 도메인 페이지가 이미 존재하는지 확인 후 중복 생성을 피한다.
-- 파일 내용이 길더라도 **전체 코드를 생략하지 않는다**.
-- 코드 블록은 Notion Markdown 형식(` ``` java `)을 사용한다.
-- 메서드 시그니처는 private 메서드도 포함한다.
+- 클래스 목록, 메서드 시그니처, 매개변수 표, 전체 코드는 넣지 않는다. **개요 / 사용 기술·오픈소스 / 작동 방식** 세 항목만 간단히 작성한다.
+- 엔티티 필드 상세 표나 별도 "엔티티 DB 정리" 페이지는 만들지 않는다.
