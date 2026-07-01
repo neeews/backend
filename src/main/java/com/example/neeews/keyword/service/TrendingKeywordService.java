@@ -47,8 +47,8 @@ public class TrendingKeywordService {
         return keywords;
     }
 
-    // 매일 새벽 2시 갱신
-    @Scheduled(cron = "0 0 2 * * *")
+    // 매시 정각 갱신
+    @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void refreshTrendingKeywords() {
         log.info("[키워드] 트렌딩 키워드 갱신 시작");
