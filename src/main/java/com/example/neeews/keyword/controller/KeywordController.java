@@ -26,9 +26,4 @@ public class KeywordController {
         return ResponseEntity.ok(Map.of("keywords", keywords));
     }
 
-    @PostMapping("/trending/refresh")
-    public ResponseEntity<Void> refreshTrending() {
-        trendingKeywordService.refreshTrendingKeywords();
-        return ResponseEntity.ok().build();
-    }
 }
