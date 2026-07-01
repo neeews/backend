@@ -5,7 +5,8 @@ import com.example.neeews.keyword.domain.TrendingKeyword.KeywordChange;
 import com.example.neeews.keyword.repository.TrendingKeywordRepository;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
-import lombok.RequiredArgsConstructor;
+import kr.co.shineware.nlp.komoran.constant.DEFAULT_MODEL;
+import kr.co.shineware.nlp.komoran.core.Komoran;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,22 +15,26 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TrendingKeywordService {
 
-    private static final Pattern WORD_PATTERN = Pattern.compile("[가-힣a-zA-Z]{2,}");
     private static final Set<String> STOP_WORDS = Set.of(
             "기자", "뉴스", "보도", "기사", "관련", "이번", "지난", "오늘", "내일", "올해",
-            "대해", "통해", "위해", "있어", "있는", "하는", "하고", "으로", "에서", "에게"
+            "대해", "통해", "위해", "것으로", "경우", "사실", "가운데", "현재", "이후", "당시"
     );
 
+    private final Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
     private final TrendingKeywordRepository trendingKeywordRepository;
     private final ArticleRepository articleRepository;
+
+    public TrendingKeywordService(TrendingKeywordRepository trendingKeywordRepository,
+                                  ArticleRepository articleRepository) {
+        this.trendingKeywordRepository = trendingKeywordRepository;
+        this.articleRepository = articleRepository;
+    }
 
     @Transactional(readOnly = true)
     public List<TrendingKeyword> getTodayKeywords() {
@@ -59,7 +64,8 @@ public class TrendingKeywordService {
 
         Map<String, Long> wordCount = recentArticles.stream()
                 .map(a -> a.getTitle() + " " + (a.getDescription() != null ? a.getDescription().replaceAll("<[^>]*>", "") : ""))
-                .flatMap(text -> WORD_PATTERN.matcher(text).results().map(r -> r.group()))
+                .flatMap(text -> komoran.analyze(text).getNouns().stream())
+                .filter(w -> w.length() >= 2)
                 .filter(w -> !STOP_WORDS.contains(w))
                 .collect(Collectors.groupingBy(w -> w, Collectors.counting()));
 
