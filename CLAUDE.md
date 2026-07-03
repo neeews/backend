@@ -9,6 +9,9 @@
 - **Spring MVC** (`spring-boot-starter-webmvc`) — REST controllers
 - **Spring Data JPA** + **MySQL** — persistence layer; configure `spring.datasource.*` in `application.properties` before running
 - **Spring Security** — authentication/authorization (currently unconfigured)
+
+## 작업 규칙
+
 - 모든 설명은 한국어로
 - push는 절대 하지 않을 것
 
