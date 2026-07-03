@@ -1,0 +1,30 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ubuntu
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            set -e
+
+            if [ -d "/home/ubuntu/backend/.git" ]; then
+              cd /home/ubuntu/backend
+              git pull
+            else
+              git clone https://github.com/neeews/backend /home/ubuntu/backend
+              cd /home/ubuntu/backend
+            fi
+
+            docker compose up -d --build
