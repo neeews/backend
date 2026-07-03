@@ -1,20 +1,22 @@
 package com.example.neeews.keyword.service;
 
+import com.example.neeews.keyword.domain.DailyKeywordCount;
 import com.example.neeews.keyword.domain.TrendingKeyword;
 import com.example.neeews.keyword.domain.TrendingKeyword.KeywordChange;
+import com.example.neeews.keyword.repository.DailyKeywordCountRepository;
 import com.example.neeews.keyword.repository.TrendingKeywordRepository;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
 import kr.co.shineware.nlp.komoran.constant.DEFAULT_MODEL;
 import kr.co.shineware.nlp.komoran.core.Komoran;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,11 +32,14 @@ public class TrendingKeywordService {
 
     private final Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
     private final TrendingKeywordRepository trendingKeywordRepository;
+    private final DailyKeywordCountRepository dailyKeywordCountRepository;
     private final ArticleRepository articleRepository;
 
     public TrendingKeywordService(TrendingKeywordRepository trendingKeywordRepository,
+                                  DailyKeywordCountRepository dailyKeywordCountRepository,
                                   ArticleRepository articleRepository) {
         this.trendingKeywordRepository = trendingKeywordRepository;
+        this.dailyKeywordCountRepository = dailyKeywordCountRepository;
         this.articleRepository = articleRepository;
     }
 
@@ -47,24 +52,19 @@ public class TrendingKeywordService {
         return keywords;
     }
 
-    // 매시 정각 갱신
+    // 매시 정각 갱신: 이번 시간에 새로 올라온 기사에서 키워드를 수집해 오늘 누적 카운트에 더하고,
+    // 누적 카운트 기준 상위 10개를 다시 뽑아 표시용 순위를 갱신한다.
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void refreshTrendingKeywords() {
         log.info("[키워드] 트렌딩 키워드 갱신 시작");
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
+        LocalDateTime now = LocalDateTime.now();
 
-        List<TrendingKeyword> prevKeywords = trendingKeywordRepository.findByDateOrderByRankAsc(yesterday);
-        Map<String, Integer> prevRankMap = prevKeywords.stream()
-                .collect(Collectors.toMap(TrendingKeyword::getWord, TrendingKeyword::getRank));
+        List<Article> hourlyArticles = articleRepository.findByPublishedAtBetween(now.minusHours(1), now);
 
-        List<Article> recentArticles = articleRepository.findAll(
-                PageRequest.of(0, 200, org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "publishedAt"))
-        ).getContent();
-
-        Map<String, Long> wordCount = recentArticles.stream()
+        Map<String, Long> hourlyWordCount = hourlyArticles.stream()
                 .map(a -> a.getTitle() + " " + (a.getDescription() != null
                         ? HtmlUtils.htmlUnescape(a.getDescription().replaceAll("<[^>]*>", ""))
                         : ""))
@@ -73,15 +73,33 @@ public class TrendingKeywordService {
                 .filter(w -> !STOP_WORDS.contains(w))
                 .collect(Collectors.groupingBy(w -> w, Collectors.counting()));
 
-        List<Map.Entry<String, Long>> top10 = wordCount.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+        Map<String, DailyKeywordCount> todayCounts = dailyKeywordCountRepository.findByDate(today).stream()
+                .collect(Collectors.toMap(DailyKeywordCount::getWord, c -> c));
+
+        hourlyWordCount.forEach((word, count) -> {
+            DailyKeywordCount existing = todayCounts.get(word);
+            if (existing != null) {
+                existing.addCount(count);
+            } else {
+                todayCounts.put(word, DailyKeywordCount.builder()
+                        .date(today).word(word).count(count).build());
+            }
+        });
+        dailyKeywordCountRepository.saveAll(todayCounts.values());
+
+        List<TrendingKeyword> prevKeywords = trendingKeywordRepository.findByDateOrderByRankAsc(yesterday);
+        Map<String, Integer> prevRankMap = prevKeywords.stream()
+                .collect(Collectors.toMap(TrendingKeyword::getWord, TrendingKeyword::getRank));
+
+        List<DailyKeywordCount> top10 = todayCounts.values().stream()
+                .sorted(Comparator.comparingLong(DailyKeywordCount::getCount).reversed())
                 .limit(10)
                 .toList();
 
         trendingKeywordRepository.deleteByDate(today);
 
         for (int i = 0; i < top10.size(); i++) {
-            String word = top10.get(i).getKey();
+            String word = top10.get(i).getWord();
             int rank = i + 1;
             Integer prevRank = prevRankMap.get(word);
 

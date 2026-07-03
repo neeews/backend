@@ -22,6 +22,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop10ByOrderByPublishedAtDesc();
 
+    List<Article> findByPublishedAtBetween(LocalDateTime start, LocalDateTime end);
+
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
     List<Article> findTop6ByOrderByViewCountDesc();
