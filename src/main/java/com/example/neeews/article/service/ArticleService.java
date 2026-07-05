@@ -4,6 +4,7 @@ import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.repository.ArticleRepository;
+import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.bookmark.service.BookmarkService;
 import com.example.neeews.rss.domain.NewsSource;
 import com.example.neeews.rss.service.RssFetchService;
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,6 +40,7 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
+    private final ArticleReadService articleReadService;
     private final RssFetchService rssFetchService;
 
     @Value("${app.image.storage-path}")
@@ -47,21 +50,26 @@ public class ArticleService {
     private String baseUrl;
 
     @Transactional(readOnly = true)
-    public List<ArticleResponse> getBreakingArticles() {
-        return articleRepository.findTop10ByOrderByPublishedAtDesc()
-                .stream().map(ArticleResponse::from).toList();
+    public List<ArticleResponse> getBreakingArticles(String email) {
+        return toResponses(articleRepository.findTop10ByOrderByPublishedAtDesc(), email);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleResponse> getLatestArticles() {
-        return articleRepository.findTop5ByOrderByPublishedAtDesc()
-                .stream().map(ArticleResponse::from).toList();
+    public List<ArticleResponse> getLatestArticles(String email) {
+        return toResponses(articleRepository.findTop5ByOrderByPublishedAtDesc(), email);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleResponse> getHotArticles() {
-        return articleRepository.findTop6ByOrderByViewCountDesc()
-                .stream().map(ArticleResponse::from).toList();
+    public List<ArticleResponse> getHotArticles(String email) {
+        return toResponses(articleRepository.findTop6ByOrderByViewCountDesc(), email);
+    }
+
+    private List<ArticleResponse> toResponses(List<Article> articles, String email) {
+        Set<Long> readIds = articleReadService.getReadArticleIds(
+                email, articles.stream().map(Article::getId).toList());
+        return articles.stream()
+                .map(a -> ArticleResponse.from(a, readIds.contains(a.getId())))
+                .toList();
     }
 
     @Transactional
@@ -120,9 +128,11 @@ public class ArticleService {
             else if (needsContent) article.markContentCrawled();
         }
 
+        articleReadService.markAsRead(id, email);
+
         List<ArticleResponse> related = getRelated(article);
         boolean isBookmarked = bookmarkService.isBookmarked(id, email);
-        return ArticleDetailResponse.of(article, related, isBookmarked);
+        return ArticleDetailResponse.of(article, related, isBookmarked, email != null);
     }
 
     private String downloadAndSaveImage(String url, Long articleId) {
@@ -160,32 +170,38 @@ public class ArticleService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ArticleResponse> getArticlesByCategory(String category, String sort, int page) {
+    public Page<ArticleResponse> getArticlesByCategory(String category, String sort, int page, String email) {
         Sort s = "popular".equals(sort)
                 ? Sort.by(Sort.Direction.DESC, "viewCount")
                 : Sort.by(Sort.Direction.DESC, "publishedAt");
         Pageable pageable = PageRequest.of(page - 1, 21, s);
-        return articleRepository.findByCategoryOptional(category, pageable).map(ArticleResponse::from);
+        return toResponsePage(articleRepository.findByCategoryOptional(category, pageable), email);
     }
 
     @Transactional(readOnly = true)
-    public Page<ArticleResponse> searchArticles(String q, List<String> categories, List<String> sourceNames, Pageable pageable) {
+    public Page<ArticleResponse> searchArticles(String q, List<String> categories, List<String> sourceNames, Pageable pageable, String email) {
         Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         boolean hasCategories = categories != null && !categories.isEmpty();
         boolean hasSources = sourceNames != null && !sourceNames.isEmpty();
 
         if (hasCategories && hasSources) {
             List<NewsSource> sources = resolveNewsSources(sourceNames);
-            return articleRepository.searchByKeywordAndSourcesAndCategories(q, sources, categories, unsorted).map(ArticleResponse::from);
+            return toResponsePage(articleRepository.searchByKeywordAndSourcesAndCategories(q, sources, categories, unsorted), email);
         }
         if (hasCategories) {
-            return articleRepository.searchByKeywordAndCategories(q, categories, unsorted).map(ArticleResponse::from);
+            return toResponsePage(articleRepository.searchByKeywordAndCategories(q, categories, unsorted), email);
         }
         if (hasSources) {
             List<NewsSource> sources = resolveNewsSources(sourceNames);
-            return articleRepository.searchByKeywordAndSources(q, sources, unsorted).map(ArticleResponse::from);
+            return toResponsePage(articleRepository.searchByKeywordAndSources(q, sources, unsorted), email);
         }
-        return articleRepository.searchByKeyword(q, unsorted).map(ArticleResponse::from);
+        return toResponsePage(articleRepository.searchByKeyword(q, unsorted), email);
+    }
+
+    private Page<ArticleResponse> toResponsePage(Page<Article> page, String email) {
+        Set<Long> readIds = articleReadService.getReadArticleIds(
+                email, page.getContent().stream().map(Article::getId).toList());
+        return page.map(a -> ArticleResponse.from(a, readIds.contains(a.getId())));
     }
 
     private List<NewsSource> resolveNewsSources(List<String> displayNames) {

@@ -33,9 +33,10 @@ public class SearchController {
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication
     ) {
-        Page<ArticleResponse> result = articleService.searchArticles(q, categories, sources, PageRequest.of(page - 1, limit));
-        if (authentication != null) {
-            searchHistoryService.save(authentication.getName(), q);
+        String email = authentication != null ? authentication.getName() : null;
+        Page<ArticleResponse> result = articleService.searchArticles(q, categories, sources, PageRequest.of(page - 1, limit), email);
+        if (email != null) {
+            searchHistoryService.save(email, q);
         }
         return ResponseEntity.ok(Map.of(
                 "total", result.getTotalElements(),

@@ -24,9 +24,11 @@ public class ArticleController {
     public ResponseEntity<Map<String, Object>> getArticles(
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "latest") String sort,
-            @RequestParam(defaultValue = "1") int page
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication
     ) {
-        Page<ArticleResponse> result = articleService.getArticlesByCategory(category, sort, page);
+        String email = authentication != null ? authentication.getName() : null;
+        Page<ArticleResponse> result = articleService.getArticlesByCategory(category, sort, page, email);
         return ResponseEntity.ok(Map.of(
                 "articles", result.getContent(),
                 "total", result.getTotalElements(),
@@ -35,18 +37,21 @@ public class ArticleController {
     }
 
     @GetMapping("/breaking")
-    public ResponseEntity<Map<String, List<ArticleResponse>>> getBreaking() {
-        return ResponseEntity.ok(Map.of("articles", articleService.getBreakingArticles()));
+    public ResponseEntity<Map<String, List<ArticleResponse>>> getBreaking(Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(Map.of("articles", articleService.getBreakingArticles(email)));
     }
 
     @GetMapping("/latest")
-    public ResponseEntity<Map<String, List<ArticleResponse>>> getLatest() {
-        return ResponseEntity.ok(Map.of("articles", articleService.getLatestArticles()));
+    public ResponseEntity<Map<String, List<ArticleResponse>>> getLatest(Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(Map.of("articles", articleService.getLatestArticles(email)));
     }
 
     @GetMapping("/hot")
-    public ResponseEntity<Map<String, List<ArticleResponse>>> getHot() {
-        return ResponseEntity.ok(Map.of("articles", articleService.getHotArticles()));
+    public ResponseEntity<Map<String, List<ArticleResponse>>> getHot(Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(Map.of("articles", articleService.getHotArticles(email)));
     }
 
     @GetMapping("/{id}")

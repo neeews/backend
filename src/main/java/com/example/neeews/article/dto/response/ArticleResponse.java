@@ -18,8 +18,13 @@ public class ArticleResponse {
     private String imageUrl;
     private String source;
     private LocalDateTime publishedAt;
+    private boolean isRead;
 
     public static ArticleResponse from(Article article) {
+        return from(article, false);
+    }
+
+    public static ArticleResponse from(Article article, boolean isRead) {
         return ArticleResponse.builder()
                 .id(article.getId())
                 .title(article.getTitle())
@@ -28,6 +33,7 @@ public class ArticleResponse {
                 .imageUrl(article.getImageUrl())
                 .source(article.getSource().getDisplayName())
                 .publishedAt(article.getPublishedAt())
+                .isRead(isRead)
                 .build();
     }
 

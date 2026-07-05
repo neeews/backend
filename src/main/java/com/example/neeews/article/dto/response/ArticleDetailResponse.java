@@ -28,9 +28,10 @@ public class ArticleDetailResponse {
         private String articleUrl;
         private LocalDateTime publishedAt;
         private boolean isBookmarked;
+        private boolean isRead;
     }
 
-    public static ArticleDetailResponse of(Article article, List<ArticleResponse> related, boolean isBookmarked) {
+    public static ArticleDetailResponse of(Article article, List<ArticleResponse> related, boolean isBookmarked, boolean isRead) {
         String description = article.getDescription();
         String summary = null;
         if (description != null) {
@@ -49,6 +50,7 @@ public class ArticleDetailResponse {
                         .articleUrl(article.getLink())
                         .publishedAt(article.getPublishedAt())
                         .isBookmarked(isBookmarked)
+                        .isRead(isRead)
                         .build())
                 .related(related)
                 .build();
