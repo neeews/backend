@@ -3,6 +3,7 @@ package com.example.neeews.search.controller;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.service.ArticleService;
 import com.example.neeews.search.service.SearchHistoryService;
+import com.example.neeews.security.AuthUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +34,7 @@ public class SearchController {
             @RequestParam(defaultValue = "10") int limit,
             Authentication authentication
     ) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         Page<ArticleResponse> result = articleService.searchArticles(q, categories, sources, PageRequest.of(page - 1, limit), email);
         if (email != null) {
             searchHistoryService.save(email, q);

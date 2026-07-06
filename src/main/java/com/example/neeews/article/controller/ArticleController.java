@@ -3,6 +3,7 @@ package com.example.neeews.article.controller;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.service.ArticleService;
+import com.example.neeews.security.AuthUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,7 +28,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "1") int page,
             Authentication authentication
     ) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         Page<ArticleResponse> result = articleService.getArticlesByCategory(category, sort, page, email);
         return ResponseEntity.ok(Map.of(
                 "articles", result.getContent(),
@@ -38,19 +39,19 @@ public class ArticleController {
 
     @GetMapping("/breaking")
     public ResponseEntity<Map<String, List<ArticleResponse>>> getBreaking(Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         return ResponseEntity.ok(Map.of("articles", articleService.getBreakingArticles(email)));
     }
 
     @GetMapping("/latest")
     public ResponseEntity<Map<String, List<ArticleResponse>>> getLatest(Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         return ResponseEntity.ok(Map.of("articles", articleService.getLatestArticles(email)));
     }
 
     @GetMapping("/hot")
     public ResponseEntity<Map<String, List<ArticleResponse>>> getHot(Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         return ResponseEntity.ok(Map.of("articles", articleService.getHotArticles(email)));
     }
 
@@ -59,7 +60,7 @@ public class ArticleController {
             @PathVariable Long id,
             Authentication authentication
     ) {
-        String email = authentication != null ? authentication.getName() : null;
+        String email = AuthUtils.resolveEmail(authentication);
         return ResponseEntity.ok(articleService.getArticleDetail(id, email));
     }
 
