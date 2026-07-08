@@ -30,6 +30,9 @@ public class TrendingKeywordService {
             "밝혔다", "있다", "했다", "된다", "이다"
     );
 
+    private static final int HISTORY_DAYS = 7;
+    private static final double SURGE_SMOOTHING = 3.0;
+
     private final Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
     private final TrendingKeywordRepository trendingKeywordRepository;
     private final DailyKeywordCountRepository dailyKeywordCountRepository;
@@ -53,7 +56,7 @@ public class TrendingKeywordService {
     }
 
     // 매시 정각 갱신: 이번 시간에 새로 올라온 기사에서 키워드를 수집해 오늘 누적 카운트에 더하고,
-    // 누적 카운트 기준 상위 10개를 다시 뽑아 표시용 순위를 갱신한다.
+    // 최근 7일간의 평소 언급량 대비 급상승 정도(surge score)를 기준으로 상위 10개를 다시 뽑아 표시용 순위를 갱신한다.
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void refreshTrendingKeywords() {
@@ -91,8 +94,18 @@ public class TrendingKeywordService {
         Map<String, Integer> prevRankMap = prevKeywords.stream()
                 .collect(Collectors.toMap(TrendingKeyword::getWord, TrendingKeyword::getRank));
 
+        Map<String, Long> historicalTotals = dailyKeywordCountRepository
+                .findByWordInAndDateBetween(todayCounts.keySet(), today.minusDays(HISTORY_DAYS), yesterday).stream()
+                .collect(Collectors.groupingBy(DailyKeywordCount::getWord, Collectors.summingLong(DailyKeywordCount::getCount)));
+
+        double dayProgress = (now.getHour() + 1) / 24.0;
+
         List<DailyKeywordCount> top10 = todayCounts.values().stream()
-                .sorted(Comparator.comparingLong(DailyKeywordCount::getCount).reversed())
+                .sorted(Comparator.comparingDouble((DailyKeywordCount c) -> {
+                    double avgDaily = historicalTotals.getOrDefault(c.getWord(), 0L) / (double) HISTORY_DAYS;
+                    double expectedByNow = avgDaily * dayProgress;
+                    return (c.getCount() + SURGE_SMOOTHING) / (expectedByNow + SURGE_SMOOTHING);
+                }).reversed())
                 .limit(10)
                 .toList();
 
