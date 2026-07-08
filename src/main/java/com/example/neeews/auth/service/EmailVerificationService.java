@@ -5,6 +5,7 @@ import com.example.neeews.auth.dto.request.EmailSendRequest;
 import com.example.neeews.auth.dto.request.EmailVerifyRequest;
 import com.example.neeews.auth.repository.EmailVerificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class EmailVerificationService {
 
+    private static final String SENDER_DISPLAY_NAME = "neeews";
+
     private final EmailVerificationRepository emailVerificationRepository;
     private final JavaMailSender mailSender;
+
+    @Value("${spring.mail.username}")
+    private String senderAddress;
 
     @Transactional
     public void sendVerificationCode(EmailSendRequest request) {
@@ -70,6 +76,7 @@ public class EmailVerificationService {
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
                 .build());
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(SENDER_DISPLAY_NAME + " <" + senderAddress + ">");
         message.setTo(email);
         message.setSubject(subject);
         message.setText("인증 코드: " + code + "\n\n5분 이내에 입력해주세요.");
