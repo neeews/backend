@@ -18,10 +18,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,6 +38,7 @@ public class ArticleService {
     private final BookmarkService bookmarkService;
     private final ArticleReadService articleReadService;
     private final RssFetchService rssFetchService;
+    private final ExternalImageFetcher externalImageFetcher;
 
     @Value("${app.image.storage-path}")
     private String imageStoragePath;
@@ -136,35 +133,18 @@ public class ArticleService {
     }
 
     private String downloadAndSaveImage(String url, Long articleId) {
+        ExternalImageFetcher.FetchedImage image = externalImageFetcher.fetch(url);
+        if (image == null) {
+            return null;
+        }
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            if (conn instanceof HttpsURLConnection https) {
-                SSLContext ctx = SSLContext.getInstance("TLSv1.2");
-                ctx.init(null, null, null);
-                https.setSSLSocketFactory(ctx.getSocketFactory());
-            }
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
-            conn.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
-            conn.setConnectTimeout(8_000);
-            conn.setReadTimeout(15_000);
-            conn.setInstanceFollowRedirects(true);
-
-            String contentType = conn.getContentType();
-            String ext = "jpg";
-            if (contentType != null) {
-                if (contentType.contains("png")) ext = "png";
-                else if (contentType.contains("gif")) ext = "gif";
-                else if (contentType.contains("webp")) ext = "webp";
-            }
-
-            byte[] imageBytes = conn.getInputStream().readAllBytes();
-            String filename = articleId + "." + ext;
+            String filename = articleId + "." + image.ext();
             Path path = Paths.get(imageStoragePath, filename);
             Files.createDirectories(path.getParent());
-            Files.write(path, imageBytes);
+            Files.write(path, image.bytes());
             return filename;
         } catch (Exception e) {
-            log.warn("[이미지 캐시] 다운로드 실패 articleId={}: {}", articleId, e.getMessage());
+            log.warn("[이미지 캐시] 저장 실패 articleId={}: {}", articleId, e.getMessage());
             return null;
         }
     }

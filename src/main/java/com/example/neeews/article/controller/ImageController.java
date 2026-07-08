@@ -1,5 +1,7 @@
 package com.example.neeews.article.controller;
 
+import com.example.neeews.article.service.ExternalImageFetcher;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,11 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
 import java.io.ByteArrayOutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +26,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RestController
 @RequestMapping("/api/images")
+@RequiredArgsConstructor
 public class ImageController {
+
+    private final ExternalImageFetcher externalImageFetcher;
 
     @Value("${app.image.storage-path}")
     private String imageStoragePath;
@@ -127,7 +128,7 @@ public class ImageController {
 
             // 원본 없으면 다운로드
             if (originalFile == null) {
-                DownloadResult result = downloadImage(url);
+                ExternalImageFetcher.FetchedImage result = externalImageFetcher.fetch(url);
                 if (result == null) {
                     log.warn("[이미지 프록시] 다운로드 실패, 502 반환: {}", url);
                     return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
@@ -158,36 +159,6 @@ public class ImageController {
         } catch (Exception e) {
             log.error("[이미지 프록시] 처리 중 오류 url={}: {}", url, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    private record DownloadResult(byte[] bytes, String ext) {}
-
-    private DownloadResult downloadImage(String url) {
-        try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            if (conn instanceof HttpsURLConnection https) {
-                SSLContext ctx = SSLContext.getInstance("TLSv1.2");
-                ctx.init(null, null, null);
-                https.setSSLSocketFactory(ctx.getSocketFactory());
-            }
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
-            conn.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
-            conn.setConnectTimeout(8_000);
-            conn.setReadTimeout(15_000);
-            conn.setInstanceFollowRedirects(true);
-
-            String contentType = conn.getContentType();
-            String ext = "jpg";
-            if (contentType != null) {
-                if (contentType.contains("png"))  ext = "png";
-                else if (contentType.contains("gif"))  ext = "gif";
-                else if (contentType.contains("webp")) ext = "webp";
-            }
-            return new DownloadResult(conn.getInputStream().readAllBytes(), ext);
-        } catch (Exception e) {
-            log.warn("[이미지 프록시] 다운로드 실패 url={}: {}", url, e.getMessage());
-            return null;
         }
     }
 
