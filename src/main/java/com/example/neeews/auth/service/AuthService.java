@@ -41,6 +41,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
         userRepository.save(user);
+        emailVerificationService.consumeVerification(request.getEmail());
         return issueTokens(user);
     }
 
@@ -94,6 +95,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+        emailVerificationService.consumeVerification(request.getEmail());
     }
 
     public UserResponse getMe(String email) {

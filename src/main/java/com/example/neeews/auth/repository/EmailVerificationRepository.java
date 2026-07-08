@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface EmailVerificationRepository extends JpaRepository<EmailVerification, Long> {
     Optional<EmailVerification> findTopByEmailOrderByCreatedAtDesc(String email);
-    boolean existsByEmailAndVerifiedTrue(String email);
+    void deleteByEmail(String email);
 }

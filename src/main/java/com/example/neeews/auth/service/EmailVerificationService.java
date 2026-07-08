@@ -50,7 +50,15 @@ public class EmailVerificationService {
     }
 
     public boolean isVerified(String email) {
-        return emailVerificationRepository.existsByEmailAndVerifiedTrue(email);
+        return emailVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
+                .filter(EmailVerification::isVerified)
+                .filter(v -> v.getExpiresAt().isAfter(LocalDateTime.now()))
+                .isPresent();
+    }
+
+    @Transactional
+    public void consumeVerification(String email) {
+        emailVerificationRepository.deleteByEmail(email);
     }
 
     private void sendCode(String email, String subject) {
