@@ -34,11 +34,15 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class ArticleService {
 
+    private static final int HOT_TOPIC_WINDOW_HOURS = 48;
+    private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
+
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
     private final ArticleReadService articleReadService;
     private final RssFetchService rssFetchService;
     private final ExternalImageFetcher externalImageFetcher;
+    private final HotTopicService hotTopicService;
 
     @Value("${app.image.storage-path}")
     private String imageStoragePath;
@@ -58,7 +62,16 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
-        return toResponses(articleRepository.findTop6ByOrderByViewCountDesc(), email);
+        String hotTopic = hotTopicService.getCurrentHotTopic();
+        List<Article> articles = hotTopic != null
+                ? articleRepository.findTopByTopicSince(hotTopic,
+                        LocalDateTime.now().minusHours(HOT_TOPIC_WINDOW_HOURS), PageRequest.of(0, 6))
+                : List.of();
+        if (articles.isEmpty()) {
+            articles = articleRepository.findTop6ByPublishedAtAfterOrderByViewCountDesc(
+                    LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS));
+        }
+        return toResponses(articles, email);
     }
 
     private List<ArticleResponse> toResponses(List<Article> articles, String email) {

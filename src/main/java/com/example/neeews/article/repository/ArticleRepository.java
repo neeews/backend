@@ -26,9 +26,14 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
-    List<Article> findTop6ByOrderByViewCountDesc();
+    List<Article> findTop6ByPublishedAtAfterOrderByViewCountDesc(LocalDateTime after);
 
     List<Article> findTop5ByCategoryAndIdNotOrderByPublishedAtDesc(String category, Long id);
+
+    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since AND " +
+                  "(LOWER(a.title) LIKE LOWER(CONCAT('%', :word, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :word, '%'))) " +
+                  "ORDER BY a.viewCount DESC")
+    List<Article> findTopByTopicSince(@Param("word") String word, @Param("since") LocalDateTime since, Pageable pageable);
 
     @Query("SELECT a FROM Article a WHERE (:category IS NULL OR a.category = :category)")
     Page<Article> findByCategoryOptional(@Param("category") String category, Pageable pageable);
