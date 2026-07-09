@@ -8,8 +8,12 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+    # 형식: "호스트IP:호스트포트:컨테이너포트"
+    # - 오른쪽 3306: db 컨테이너 안에서 MySQL이 실제로 듣고 있는 포트 (고정값, 못 바꿈)
+    # - 왼쪽 127.0.0.1:3306: 그 포트를 VPS의 루프백(자기 자신)에만 열어주는 것.
+    #   0.0.0.0으로 하면 인터넷 전체에 노출되니, 외부 접속은 SSH 터널로만 하도록 이렇게 막아둔다.
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
