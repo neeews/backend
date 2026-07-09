@@ -17,6 +17,10 @@ export const options = {
   thresholds: {
     http_req_duration: ['p(95)<300'], // 95%가 300ms 이내
     http_req_failed: ['rate<0.01'],   // 실패율 1% 미만
+    'http_req_duration{name:hot}': ['p(95)<300'],
+    'http_req_duration{name:latest}': ['p(95)<300'],
+    'http_req_duration{name:breaking}': ['p(95)<300'],
+    'http_req_duration{name:list}': ['p(95)<300'],
   },
 };
 
@@ -34,16 +38,16 @@ export function setup() {
 export default function (data) {
   const headers = data.token ? { Authorization: `Bearer ${data.token}` } : {};
 
-  const hot = http.get(`${BASE_URL}/articles/hot`, { headers });
+  const hot = http.get(`${BASE_URL}/articles/hot`, { headers, tags: { name: 'hot' } });
   check(hot, { '핫이슈 200': (r) => r.status === 200 });
 
-  const latest = http.get(`${BASE_URL}/articles/latest`, { headers });
+  const latest = http.get(`${BASE_URL}/articles/latest`, { headers, tags: { name: 'latest' } });
   check(latest, { '최신 기사 200': (r) => r.status === 200 });
 
-  const breaking = http.get(`${BASE_URL}/articles/breaking`, { headers });
+  const breaking = http.get(`${BASE_URL}/articles/breaking`, { headers, tags: { name: 'breaking' } });
   check(breaking, { '속보 200': (r) => r.status === 200 });
 
-  const list = http.get(`${BASE_URL}/articles?category=정치&sort=latest&page=1`, { headers });
+  const list = http.get(`${BASE_URL}/articles?category=${encodeURIComponent('정치')}&sort=latest&page=1`, { headers, tags: { name: 'list' } });
   check(list, { '목록 200': (r) => r.status === 200 });
 
   sleep(1); // 실제 사용자처럼 요청 사이 텀
