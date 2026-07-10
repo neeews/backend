@@ -11,21 +11,24 @@ description: Notion 기능명세서·API명세서와 현재 코드를 비교해 
 
 | 문서 | URL / ID |
 |------|----------|
-| API 명세서 DB | https://app.notion.com/p/a8f7aff125c383bb955e81d449d06595 |
-| API 명세서 data_source_id | `a977aff1-25c3-83b8-b5c6-8714e1f51b8f` |
+| API 목록 DB (neeews 페이지 하위) | https://app.notion.com/p/5b0755eccb6e4a41b46cdf74179f7622 |
+| API 목록 data_source_id | `e062f354-b072-4937-b81b-f85bce1e844c` |
 | 기능 명세서 페이지 | https://app.notion.com/p/3877aff125c3819fa7fecc7c675d2bde |
 
-## API 명세서 DB 스키마
+> **주의**: 워크스페이스에 "API 명세서"라는 이름의 DB가 여럿 있다 (잡담 하위 `a8f7aff1…`, 렌트렐라 하위 `3967aff1…`). 이들은 다른 프로젝트 것이므로 절대 사용하지 말 것. neeews의 API 명세서는 위의 **API 목록** DB다.
+
+## API 목록 DB 스키마
 
 ```
-이름          → title       (API 이름)
-HTTP header  → multi_select (POST / GET / DELETE / PUT / PATCH)
-userDefined:URL → text      (엔드포인트 경로, 예: /auth/login)
-group        → text         (그룹명, 예: auth / articles / users / rss)
-Type         → multi_select (Parameter / None / JSON)
-requestBody  → text         (요청 바디 설명)
-responseBody → text         (응답 바디 설명)
-설명          → text         (한 줄 설명)
+API 이름         → title    (API 이름)
+Endpoint         → text     (엔드포인트 경로, 예: /auth/login)
+Method           → select   (GET / POST / PUT / DELETE / PATCH) ※ 단일 선택, 문자열 하나로 전달
+Request Body 예시 → text    (요청 바디 예시 JSON, 없으면 "없음")
+Response 예시     → text    (응답 예시)
+상태             → select   (미구현 / 개발중 / 완료)
+설명             → text     (한 줄 설명)
+연결 페이지·컴포넌트 → text  (프론트 연결 지점)
+인증 필요         → checkbox ("__YES__" / "__NO__")
 ```
 
 ---
@@ -34,16 +37,7 @@ responseBody → text         (응답 바디 설명)
 
 ### 1단계 — 코드에서 전체 API 목록 추출
 
-아래 파일들을 **모두 Read**해서 @RequestMapping, @GetMapping, @PostMapping, @DeleteMapping 등을 파악한다.
-
-```
-src/main/java/com/example/neeews/auth/controller/AuthController.java
-src/main/java/com/example/neeews/article/controller/ArticleController.java
-src/main/java/com/example/neeews/user/controller/UserController.java
-src/main/java/com/example/neeews/search/controller/SearchController.java
-src/main/java/com/example/neeews/keyword/controller/KeywordController.java
-src/main/java/com/example/neeews/rss/controller/RssController.java
-```
+컨트롤러는 늘었다 줄었다 하므로 먼저 `find src/main/java -name "*Controller.java"`로 전체 목록을 뽑은 뒤, 나온 파일을 **모두 Read**해서 @RequestMapping, @GetMapping, @PostMapping, @DeleteMapping 등을 파악한다.
 
 각 엔드포인트를 아래 형식으로 정리한다.
 
@@ -57,16 +51,17 @@ POST   | /auth/login        | auth    | 로그인
 
 ### 2단계 — Notion API 명세서 기존 항목 조회
 
-`notion-search` 도구를 사용해 API 명세서 데이터베이스 내 기존 항목을 조회한다.
+`notion-search` 도구를 사용해 API 목록 데이터베이스 내 기존 항목을 조회한다.
+(`notion-query-data-sources`의 SQL 모드는 Business 플랜 전용이라 사용 불가)
 
 ```
-query: "API 명세서"
-page_url: "https://app.notion.com/p/a8f7aff125c383bb955e81d449d06595"
+query: "API"
+data_source_url: "collection://e062f354-b072-4937-b81b-f85bce1e844c"
 page_size: 25
 ```
 
-검색 결과로 이미 등록된 URL 목록을 파악한다.
-결과가 25개 미만이면 추가 검색 없이 진행해도 된다.
+검색 결과로 이미 등록된 항목(이름/Endpoint)을 파악한다.
+결과가 25개(최대치)면 누락이 있을 수 있으니 도메인별 키워드(비밀번호, 검색 기록, RSS, 이미지, 관리자 등)로 추가 검색한다.
 
 ### 3단계 — 코드 vs Notion 비교
 
@@ -82,26 +77,27 @@ page_size: 25
 {
   "parent": {
     "type": "data_source_id",
-    "data_source_id": "a977aff1-25c3-83b8-b5c6-8714e1f51b8f"
+    "data_source_id": "e062f354-b072-4937-b81b-f85bce1e844c"
   },
   "pages": [
     {
       "properties": {
-        "이름": "로그인",
-        "HTTP header": "[\"POST\"]",
-        "userDefined:URL": "/auth/login",
-        "group": "auth",
-        "Type": "[\"JSON\"]",
-        "requestBody": "{ email, password }",
-        "responseBody": "{ accessToken, refreshToken }",
-        "설명": "이메일과 비밀번호로 로그인 후 JWT 토큰 반환"
+        "API 이름": "로그인",
+        "Endpoint": "/auth/login",
+        "Method": "POST",
+        "Request Body 예시": "{ \"email\": \"...\", \"password\": \"...\" }",
+        "Response 예시": "{ \"accessToken\": \"...\", \"refreshToken\": \"...\" }",
+        "상태": "완료",
+        "설명": "이메일과 비밀번호로 로그인 후 JWT 토큰 반환",
+        "연결 페이지·컴포넌트": "로그인 페이지",
+        "인증 필요": "__NO__"
       }
     }
   ]
 }
 ```
 
-> **주의**: HTTP header, Type은 JSON 배열 문자열로 전달 (예: `"[\"POST\"]"`)
+> **주의**: Method와 상태는 select(단일 문자열), 인증 필요는 checkbox(`"__YES__"`/`"__NO__"`)로 전달
 
 ### 5단계 — 기능 명세서 구현 상태 확인 (선택)
 
