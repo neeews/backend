@@ -24,8 +24,10 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,6 +38,7 @@ public class ArticleService {
 
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
+    private static final int HOT_ARTICLE_COUNT = 6;
 
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
@@ -62,16 +65,40 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
-        String hotTopic = hotTopicService.getCurrentHotTopic();
-        List<Article> articles = hotTopic != null
-                ? articleRepository.findTopByTopicSince(hotTopic,
-                        LocalDateTime.now().minusHours(HOT_TOPIC_WINDOW_HOURS), PageRequest.of(0, 6))
-                : List.of();
-        if (articles.isEmpty()) {
-            articles = articleRepository.findTop6ByPublishedAtAfterOrderByViewCountDesc(
-                    LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS));
+        List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
+        if (articles.size() < HOT_ARTICLE_COUNT) {
+            Set<Long> ids = articles.stream().map(Article::getId).collect(Collectors.toSet());
+            for (Article a : articleRepository.findTop6ByPublishedAtAfterOrderByViewCountDesc(
+                    LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS))) {
+                if (articles.size() >= HOT_ARTICLE_COUNT) break;
+                if (ids.add(a.getId())) articles.add(a);
+            }
         }
         return toResponses(articles, email);
+    }
+
+    // 급상승 주제별 기사 목록을 라운드로빈으로 섞어 여러 이슈가 골고루 노출되게 담는다.
+    private List<Article> pickHotTopicArticles(List<String> hotTopics) {
+        List<Article> result = new ArrayList<>();
+        if (hotTopics.isEmpty()) {
+            return result;
+        }
+        LocalDateTime since = LocalDateTime.now().minusHours(HOT_TOPIC_WINDOW_HOURS);
+        List<List<Article>> perTopic = hotTopics.stream()
+                .map(topic -> articleRepository.findTopByTopicSince(topic, since, PageRequest.of(0, HOT_ARTICLE_COUNT)))
+                .toList();
+        Set<Long> ids = new HashSet<>();
+        int maxSize = perTopic.stream().mapToInt(List::size).max().orElse(0);
+        for (int i = 0; i < maxSize && result.size() < HOT_ARTICLE_COUNT; i++) {
+            for (List<Article> topicArticles : perTopic) {
+                if (i >= topicArticles.size() || result.size() >= HOT_ARTICLE_COUNT) continue;
+                Article a = topicArticles.get(i);
+                if (ids.add(a.getId())) {
+                    result.add(a);
+                }
+            }
+        }
+        return result;
     }
 
     private List<ArticleResponse> toResponses(List<Article> articles, String email) {
