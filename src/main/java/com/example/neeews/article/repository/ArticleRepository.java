@@ -38,6 +38,14 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("SELECT a FROM Article a WHERE (:category IS NULL OR a.category = :category)")
     Page<Article> findByCategoryOptional(@Param("category") String category, Pageable pageable);
 
+    // 인기 정렬: HN 방식 점수 (조회수+1) / (경과일수+1)^1.5 — 조회수가 많아도 오래되면 감쇠한다.
+    // GREATEST(..., 0): RSS 발행시각이 서버 시각(UTC)보다 미래인 기사가 있어 음수 나이를 0으로 클램프
+    @Query(value = "SELECT * FROM articles a WHERE (:category IS NULL OR a.category = :category) " +
+                  "ORDER BY (a.view_count + 1) / POW(GREATEST(TIMESTAMPDIFF(HOUR, a.published_at, NOW()), 0) / 24.0 + 1, 1.5) DESC, a.published_at DESC",
+           countQuery = "SELECT COUNT(*) FROM articles a WHERE (:category IS NULL OR a.category = :category)",
+           nativeQuery = true)
+    Page<Article> findByCategoryOrderByPopularity(@Param("category") String category, Pageable pageable);
+
     @Query(value = "SELECT a FROM Article a WHERE " +
                   "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
                   "LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%')) " +

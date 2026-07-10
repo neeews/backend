@@ -191,11 +191,11 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public Page<ArticleResponse> getArticlesByCategory(String category, String sort, int page, String email) {
-        Sort s = "popular".equals(sort)
-                ? Sort.by(Sort.Direction.DESC, "viewCount")
-                : Sort.by(Sort.Direction.DESC, "publishedAt");
-        Pageable pageable = PageRequest.of(page - 1, 21, s);
-        return toResponsePage(articleRepository.findByCategoryOptional(category, pageable), email);
+        Page<Article> result = "popular".equals(sort)
+                ? articleRepository.findByCategoryOrderByPopularity(category, PageRequest.of(page - 1, 21))
+                : articleRepository.findByCategoryOptional(category,
+                        PageRequest.of(page - 1, 21, Sort.by(Sort.Direction.DESC, "publishedAt")));
+        return toResponsePage(result, email);
     }
 
     @Transactional(readOnly = true)
