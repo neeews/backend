@@ -55,3 +55,11 @@ As the project grows, follow the function base under this root. Example:
 - `domain` (or `entity`) — `@Entity` classes
 - `dto` — request/response objects
 - `config` — `@Configuration` classes (Security, etc.)
+
+세부 컨벤션은 아래 규칙 파일을 따른다:
+
+@.claude/rules/architecture.md
+@.claude/rules/api-convention.md
+@.claude/rules/domain-convention.md
+@.claude/rules/code-style.md
+@.claude/rules/testing.md
