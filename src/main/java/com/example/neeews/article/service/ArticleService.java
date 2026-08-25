@@ -3,6 +3,7 @@ package com.example.neeews.article.service;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
+import com.example.neeews.article.dto.response.DailySummaryResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.bookmark.service.BookmarkService;
@@ -62,6 +63,14 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public List<ArticleResponse> getLatestArticles(String email) {
         return toResponses(articleRepository.findTop5ByOrderByPublishedAtDesc(), email);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DailySummaryResponse> getDailySummaries() {
+        return articleRepository.findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc()
+                .stream()
+                .map(DailySummaryResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

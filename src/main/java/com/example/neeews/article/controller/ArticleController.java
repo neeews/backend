@@ -2,6 +2,7 @@ package com.example.neeews.article.controller;
 
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
+import com.example.neeews.article.dto.response.DailySummaryResponse;
 import com.example.neeews.article.service.ArticleService;
 import com.example.neeews.security.AuthUtils;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +54,11 @@ public class ArticleController {
     public ResponseEntity<Map<String, List<ArticleResponse>>> getHot(Authentication authentication) {
         String email = AuthUtils.resolveEmail(authentication);
         return ResponseEntity.ok(Map.of("articles", articleService.getHotArticles(email)));
+    }
+
+    @GetMapping("/today")
+    public ResponseEntity<Map<String, List<DailySummaryResponse>>> getDailySummaries() {
+        return ResponseEntity.ok(Map.of("articles", articleService.getDailySummaries()));
     }
 
     @GetMapping("/{id}")

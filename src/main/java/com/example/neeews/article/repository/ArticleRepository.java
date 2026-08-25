@@ -95,4 +95,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     @Query("SELECT a.category, MAX(a.aiSummarizedAt) FROM Article a WHERE a.aiSummary IS NOT NULL GROUP BY a.category")
     List<Object[]> findLastSummarizedAtByCategory();
+
+    List<Article> findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc();
 }
