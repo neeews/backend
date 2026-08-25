@@ -28,13 +28,18 @@ public class ArticleResponse {
         return ArticleResponse.builder()
                 .id(article.getId())
                 .title(article.getTitle())
-                .summary(extractSummary(article.getDescription()))
+                .summary(resolveSummary(article))
                 .category(article.getCategory())
                 .imageUrl(article.getImageUrl())
                 .source(article.getSource().getDisplayName())
                 .publishedAt(article.getPublishedAt())
                 .isRead(isRead)
                 .build();
+    }
+
+    private static String resolveSummary(Article article) {
+        String aiSummary = article.getAiSummary();
+        return aiSummary != null ? aiSummary : extractSummary(article.getDescription());
     }
 
     private static String extractSummary(String description) {

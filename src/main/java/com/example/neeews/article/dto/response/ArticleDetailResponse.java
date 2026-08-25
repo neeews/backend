@@ -33,8 +33,8 @@ public class ArticleDetailResponse {
 
     public static ArticleDetailResponse of(Article article, List<ArticleResponse> related, boolean isBookmarked, boolean isRead) {
         String description = article.getDescription();
-        String summary = null;
-        if (description != null) {
+        String summary = article.getAiSummary();
+        if (summary == null && description != null) {
             String plain = HtmlUtils.htmlUnescape(description.replaceAll("<[^>]*>", "")).trim();
             summary = plain.length() > 200 ? plain.substring(0, 200) + "..." : plain;
         }

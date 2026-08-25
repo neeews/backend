@@ -57,6 +57,11 @@ public class Article {
 
     private LocalDateTime lastViewedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String aiSummary;
+
+    private LocalDateTime aiSummarizedAt;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean contentCrawled = false;
@@ -95,6 +100,11 @@ public class Article {
 
     public void markContentCrawled() {
         this.contentCrawled = true;
+    }
+
+    public void updateAiSummary(String aiSummary) {
+        this.aiSummary = aiSummary;
+        this.aiSummarizedAt = LocalDateTime.now();
     }
 
     public void updateCategory(String category) {

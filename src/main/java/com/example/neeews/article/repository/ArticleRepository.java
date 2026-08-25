@@ -89,4 +89,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     @Query("SELECT a.category, COUNT(a) FROM Article a GROUP BY a.category ORDER BY COUNT(a) DESC")
     List<Object[]> findCategoryStats();
+
+    Optional<Article> findTop1ByCategoryAndAiSummaryIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
+            String category, LocalDateTime after);
+
+    @Query("SELECT a.category, MAX(a.aiSummarizedAt) FROM Article a WHERE a.aiSummary IS NOT NULL GROUP BY a.category")
+    List<Object[]> findLastSummarizedAtByCategory();
 }
