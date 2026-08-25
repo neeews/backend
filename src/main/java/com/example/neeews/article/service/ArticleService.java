@@ -39,6 +39,7 @@ public class ArticleService {
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
     private static final int HOT_ARTICLE_COUNT = 6;
+    private static final int POPULAR_WINDOW_DAYS = 7;
 
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
@@ -68,7 +69,7 @@ public class ArticleService {
         List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
         if (articles.size() < HOT_ARTICLE_COUNT) {
             Set<Long> ids = articles.stream().map(Article::getId).collect(Collectors.toSet());
-            for (Article a : articleRepository.findTop6ByPublishedAtAfterOrderByViewCountDesc(
+            for (Article a : articleRepository.findTop6ByPublishedAtAfterOrderByPublishedAtDesc(
                     LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS))) {
                 if (articles.size() >= HOT_ARTICLE_COUNT) break;
                 if (ids.add(a.getId())) articles.add(a);
@@ -192,7 +193,8 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public Page<ArticleResponse> getArticlesByCategory(String category, String sort, int page, String email) {
         Page<Article> result = "popular".equals(sort)
-                ? articleRepository.findByCategoryOrderByPopularity(category, PageRequest.of(page - 1, 21))
+                ? articleRepository.findByCategoryOrderByPopularity(category,
+                        LocalDateTime.now().minusDays(POPULAR_WINDOW_DAYS), PageRequest.of(page - 1, 21))
                 : articleRepository.findByCategoryOptional(category,
                         PageRequest.of(page - 1, 21, Sort.by(Sort.Direction.DESC, "publishedAt")));
         return toResponsePage(result, email);

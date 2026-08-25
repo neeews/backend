@@ -26,25 +26,27 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
-    List<Article> findTop6ByPublishedAtAfterOrderByViewCountDesc(LocalDateTime after);
+    List<Article> findTop6ByPublishedAtAfterOrderByPublishedAtDesc(LocalDateTime after);
 
     List<Article> findTop5ByCategoryAndIdNotOrderByPublishedAtDesc(String category, Long id);
 
     @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since AND " +
                   "(LOWER(a.title) LIKE LOWER(CONCAT('%', :word, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :word, '%'))) " +
-                  "ORDER BY a.viewCount DESC")
+                  "ORDER BY a.publishedAt DESC")
     List<Article> findTopByTopicSince(@Param("word") String word, @Param("since") LocalDateTime since, Pageable pageable);
 
     @Query("SELECT a FROM Article a WHERE (:category IS NULL OR a.category = :category)")
     Page<Article> findByCategoryOptional(@Param("category") String category, Pageable pageable);
 
-    // 인기 정렬: HN 방식 점수 (조회수+1) / (경과일수+1)^1.5 — 조회수가 많아도 오래되면 감쇠한다.
+    // 인기 정렬: HN 방식 점수 (조회수+1) / (경과일수+1)^2.0 — 조회수가 많아도 오래되면 감쇠한다.
+    // 최근 :since 이후 기사만 후보로 삼아, 초기 저트래픽 구간에 조회수가 몰린 오래된 기사가 상단을 점유하지 않게 한다.
     // GREATEST(..., 0): RSS 발행시각이 서버 시각(UTC)보다 미래인 기사가 있어 음수 나이를 0으로 클램프
     @Query(value = "SELECT * FROM articles a WHERE (:category IS NULL OR a.category = :category) " +
-                  "ORDER BY (a.view_count + 1) / POW(GREATEST(TIMESTAMPDIFF(HOUR, a.published_at, NOW()), 0) / 24.0 + 1, 1.5) DESC, a.published_at DESC",
-           countQuery = "SELECT COUNT(*) FROM articles a WHERE (:category IS NULL OR a.category = :category)",
+                  "AND a.published_at >= :since " +
+                  "ORDER BY (a.view_count + 1) / POW(GREATEST(TIMESTAMPDIFF(HOUR, a.published_at, NOW()), 0) / 24.0 + 1, 2.0) DESC, a.published_at DESC",
+           countQuery = "SELECT COUNT(*) FROM articles a WHERE (:category IS NULL OR a.category = :category) AND a.published_at >= :since",
            nativeQuery = true)
-    Page<Article> findByCategoryOrderByPopularity(@Param("category") String category, Pageable pageable);
+    Page<Article> findByCategoryOrderByPopularity(@Param("category") String category, @Param("since") LocalDateTime since, Pageable pageable);
 
     @Query(value = "SELECT a FROM Article a WHERE " +
                   "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
