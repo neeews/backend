@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "article_reads",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "article_id"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "article_id"}),
+       indexes = @Index(name = "idx_article_read_user_last_read", columnList = "user_id, lastReadAt"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
@@ -31,8 +32,17 @@ public class ArticleRead {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private LocalDateTime lastReadAt;
+
     @PrePersist
     void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.lastReadAt = now;
+    }
+
+    public void touchReadAt() {
+        this.lastReadAt = LocalDateTime.now();
     }
 }

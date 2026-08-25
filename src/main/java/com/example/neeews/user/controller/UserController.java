@@ -1,8 +1,10 @@
 package com.example.neeews.user.controller;
 
 import com.example.neeews.article.dto.response.ArticleResponse;
+import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.search.service.SearchHistoryService;
+import com.example.neeews.security.AuthUtils;
 import com.example.neeews.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ public class UserController {
 
     private final UserService userService;
     private final SearchHistoryService searchHistoryService;
+    private final ArticleReadService articleReadService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getProfile(Authentication authentication) {
@@ -29,6 +32,24 @@ public class UserController {
     public ResponseEntity<Map<String, List<ArticleResponse>>> getBookmarks(Authentication authentication) {
         List<ArticleResponse> articles = userService.getBookmarkedArticles(authentication.getName());
         return ResponseEntity.ok(Map.of("articles", articles));
+    }
+
+    @GetMapping("/me/history")
+    public ResponseEntity<Map<String, List<ArticleResponse>>> getReadHistory(Authentication authentication) {
+        List<ArticleResponse> articles = articleReadService.getReadHistory(AuthUtils.resolveEmail(authentication));
+        return ResponseEntity.ok(Map.of("articles", articles));
+    }
+
+    @DeleteMapping("/me/history")
+    public ResponseEntity<Void> clearReadHistory(Authentication authentication) {
+        articleReadService.clearHistoryForUser(AuthUtils.resolveEmail(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/me/history/{articleId}")
+    public ResponseEntity<Void> removeReadHistory(@PathVariable Long articleId, Authentication authentication) {
+        articleReadService.removeFromHistory(articleId, AuthUtils.resolveEmail(authentication));
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me/search-history")

@@ -1,6 +1,7 @@
 package com.example.neeews.user.service;
 
 import com.example.neeews.article.dto.response.ArticleResponse;
+import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.auth.domain.User;
 import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.auth.repository.RefreshTokenRepository;
@@ -21,6 +22,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final BookmarkRepository bookmarkRepository;
     private final SearchHistoryRepository searchHistoryRepository;
+    private final ArticleReadService articleReadService;
 
     @Transactional(readOnly = true)
     public UserResponse getProfile(String email) {
@@ -40,6 +42,7 @@ public class UserService {
     @Transactional
     public void deleteAccount(String email) {
         User user = getUser(email);
+        articleReadService.clearHistoryForUser(email);
         bookmarkRepository.deleteAllByUser(user);
         refreshTokenRepository.deleteByUser(user);
         searchHistoryRepository.deleteAllByUser(user);
