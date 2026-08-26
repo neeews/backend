@@ -73,3 +73,7 @@ jobs:
             fi
 
             docker compose up -d --build
+
+            # 배포마다 새 빌드 레이어가 쌓이고 Docker는 이를 자동 삭제하지 않는다.
+            # 24시간 넘은 미사용 캐시만 지워 다음 빌드 속도는 유지한다.
+            docker builder prune -f --filter until=24h
