@@ -32,7 +32,7 @@ public class ArticleSummaryService {
 
     // 요약할 만한 최소 분량. RSS description만 있는 기사는 평균 79자라 이 아래는 요약해도 원문보다 길어진다.
     private static final int MIN_BODY_LENGTH = 300;
-    private static final int CANDIDATE_WINDOW_HOURS = 3;
+    private static final int CANDIDATE_WINDOW_HOURS = 12;
 
     private final ArticleRepository articleRepository;
     private final RssFetchService rssFetchService;

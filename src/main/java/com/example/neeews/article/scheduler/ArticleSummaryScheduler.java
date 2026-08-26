@@ -15,7 +15,7 @@ public class ArticleSummaryScheduler {
 
     private final ArticleSummaryService articleSummaryService;
 
-    @Scheduled(cron = "0 10 */3 * * *")
+    @Scheduled(cron = "0 10 0,12 * * *")
     public void summarize() {
         try {
             articleSummaryService.summarizeBatch();
