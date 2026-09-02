@@ -25,6 +25,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,18 +40,25 @@ public class RssFetchService {
 
     private final ArticleRepository articleRepository;
 
+    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
+
     private static final Set<NewsSource> DEPRECATED_SOURCES = Set.of(
             NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN,
-            NewsSource.YONHAP_IT, NewsSource.HANKYUNG
+            NewsSource.YONHAP_IT, NewsSource.HANKYUNG,
+            NewsSource.KHAN_IT
     );
 
-    private static final Map<String, String> CONTENT_SELECTORS = Map.of(
-        "연합뉴스", "article.story-news",
-        "한겨레", "div.article-text",
-        "경향신문", "div.art_body",
-        "한국경제", "div#articletxt",
-        "전자신문", "div.article_txt",
-        "ZDnet코리아", "div#articleBody"
+    private static final Map<String, String> CONTENT_SELECTORS = Map.ofEntries(
+        Map.entry("연합뉴스", "article.story-news"),
+        Map.entry("한겨레", "div.article-text"),
+        Map.entry("경향신문", "div.art_body"),
+        Map.entry("한국경제", "div#articletxt"),
+        Map.entry("전자신문", "div.article_txt"),
+        Map.entry("ZDnet코리아", "div#articleBody"),
+        Map.entry("동아일보", "section.news_view"),
+        Map.entry("SBS", "div.text_area"),
+        Map.entry("아이뉴스24", "div#articleBody")
+        // 조선일보는 본문을 JS로 렌더링해 Jsoup으로 못 읽는다. RSS의 content:encoded로 본문을 받으므로 셀렉터가 필요 없다.
     );
 
     @Transactional
@@ -124,13 +132,9 @@ public class RssFetchService {
                 if (link == null || articleRepository.existsByLink(link)) {
                     continue;
                 }
-                LocalDateTime publishedAt = null;
-                if (entry.getPublishedDate() != null) {
-                    publishedAt = entry.getPublishedDate().toInstant()
-                            .atZone(ZoneId.of("Asia/Seoul"))
-                            .toLocalDateTime();
-                }
+                LocalDateTime publishedAt = resolvePublishedAt(entry);
                 String description = entry.getDescription() != null ? entry.getDescription().getValue() : null;
+                if (description == null || description.isBlank()) description = extractContentEncoded(entry);
                 String author = entry.getAuthor();
                 if (author == null || author.isBlank()) {
                     author = source.getDisplayName();
@@ -157,6 +161,35 @@ public class RssFetchService {
             log.error("[RSS] {} 수집 실패: {}", source.getDisplayName(), e.getMessage());
         }
         return saved;
+    }
+
+    // 조선일보는 <description>이 비어 있고 <content:encoded>에만 본문이 들어온다.
+    // 여기서 본문을 확보하면 별도 크롤링 없이 요약 대상이 된다.
+    private String extractContentEncoded(SyndEntry entry) {
+        try {
+            ContentModule content = (ContentModule) entry.getModule(ContentModule.URI);
+            if (content != null && content.getEncodeds() != null) {
+                for (String encoded : content.getEncodeds()) {
+                    if (encoded != null && !encoded.isBlank()) return encoded;
+                }
+            }
+        } catch (Exception ignored) {}
+        try {
+            for (var el : entry.getForeignMarkup()) {
+                if ("encoded".equals(el.getName()) && el.getText() != null && !el.getText().isBlank()) {
+                    return el.getText();
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    // 한겨레 등 일부 RSS는 아이템에 발행시각 태그가 없다. null로 두면 최신순·인기순·요약 후보 등
+    // published_at을 조건이나 정렬에 쓰는 모든 조회에서 통째로 누락되므로 수집 시각으로 대체한다.
+    private LocalDateTime resolvePublishedAt(SyndEntry entry) {
+        Date date = entry.getPublishedDate() != null ? entry.getPublishedDate() : entry.getUpdatedDate();
+        if (date == null) return LocalDateTime.now(SEOUL_ZONE);
+        return date.toInstant().atZone(SEOUL_ZONE).toLocalDateTime();
     }
 
     public String crawlArticleContent(String url, String sourceName) {
