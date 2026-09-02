@@ -1,6 +1,7 @@
 package com.example.neeews.article.repository;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.Importance;
 import com.example.neeews.rss.domain.NewsSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -97,4 +98,23 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Object[]> findLastSummarizedAtByCategory();
 
     List<Article> findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc();
+
+    List<Article> findByImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
+            LocalDateTime after, Pageable pageable);
+
+    List<Article> findByImportanceIsNullOrderByPublishedAtDesc(Pageable pageable);
+
+    Page<Article> findByImportance(Importance importance, Pageable pageable);
+
+    Page<Article> findByImportanceAndCategory(Importance importance, String category, Pageable pageable);
+
+    long countByImportance(Importance importance);
+
+    long countByImportanceIsNull();
+
+    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since AND a.importance = :importance " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> findByImportanceSince(@Param("importance") Importance importance,
+                                        @Param("since") LocalDateTime since,
+                                        Pageable pageable);
 }

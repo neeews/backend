@@ -11,7 +11,9 @@ import java.time.LocalDateTime;
         @Index(name = "idx_article_link", columnList = "link", unique = true),
         @Index(name = "idx_article_source", columnList = "source"),
         @Index(name = "idx_article_published_at", columnList = "publishedAt"),
-        @Index(name = "idx_article_category", columnList = "category")
+        @Index(name = "idx_article_category", columnList = "category"),
+        @Index(name = "idx_article_importance", columnList = "importance"),
+        @Index(name = "idx_article_importance_published", columnList = "importance, publishedAt")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -66,6 +68,17 @@ public class Article {
     @Column(nullable = false)
     private boolean contentCrawled = false;
 
+    // 서비스에 노출할 현재 중요도 한 건. 라벨 이력 전체는 ArticleImportanceLabel에 쌓인다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Importance importance;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ImportanceSource importanceSource;
+
+    private LocalDateTime importanceScoredAt;
+
     @PrePersist
     void onCreate() {
         this.fetchedAt = LocalDateTime.now();
@@ -109,5 +122,11 @@ public class Article {
 
     public void updateCategory(String category) {
         this.category = category;
+    }
+
+    public void updateImportance(Importance importance, ImportanceSource importanceSource) {
+        this.importance = importance;
+        this.importanceSource = importanceSource;
+        this.importanceScoredAt = LocalDateTime.now();
     }
 }
