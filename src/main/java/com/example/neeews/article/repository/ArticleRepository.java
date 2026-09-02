@@ -99,22 +99,13 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc();
 
-    List<Article> findByImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
-            LocalDateTime after, Pageable pageable);
-
-    List<Article> findByImportanceIsNullOrderByPublishedAtDesc(Pageable pageable);
-
-    Page<Article> findByImportance(Importance importance, Pageable pageable);
-
-    Page<Article> findByImportanceAndCategory(Importance importance, String category, Pageable pageable);
-
-    long countByImportance(Importance importance);
-
-    long countByImportanceIsNull();
-
-    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since AND a.importance = :importance " +
+    // 아직 라벨이 없는 기사 — 라벨링 대상 조회용
+    @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
+           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.articleId = a.id) " +
            "ORDER BY a.publishedAt DESC")
-    List<Article> findByImportanceSince(@Param("importance") Importance importance,
-                                        @Param("since") LocalDateTime since,
-                                        Pageable pageable);
+    List<Article> findUnlabeled(Pageable pageable);
+
+    @Query("SELECT a FROM Article a JOIN ArticleImportanceLabel l ON l.articleId = a.id " +
+           "WHERE l.label = :label ORDER BY a.publishedAt DESC")
+    Page<Article> findByLabel(@Param("label") Importance label, Pageable pageable);
 }
