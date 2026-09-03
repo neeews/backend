@@ -99,13 +99,45 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc();
 
-    // 아직 라벨이 없는 기사 — 라벨링 대상 조회용
+    // 아직 아무도 라벨을 안 매긴 기사 — AI 자동 라벨링 대상 조회용
     @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
-           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.articleId = a.id) " +
+           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.article = a) " +
            "ORDER BY a.publishedAt DESC")
     List<Article> findUnlabeled(Pageable pageable);
 
-    @Query("SELECT a FROM Article a JOIN ArticleImportanceLabel l ON l.articleId = a.id " +
+    // 특정 라벨러가 그 회차에 아직 안 매긴 기사. 다른 사람/AI가 매겼는지는 따지지 않는다.
+    @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
+           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.article = a " +
+           " AND l.labeledBy = :labeledBy AND l.round = :round) " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> findUnlabeledBy(@Param("labeledBy") String labeledBy,
+                                  @Param("round") int round,
+                                  Pageable pageable);
+
+    // 위와 같되 AI가 이미 매긴 기사만 — 시드 라벨이 사람 판단과 얼마나 맞는지 재는 대조군
+    @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
+           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.article = a " +
+           " AND l.labeledBy = :labeledBy AND l.round = :round) " +
+           "AND EXISTS (SELECT 1 FROM ArticleImportanceLabel s WHERE s.article = a " +
+           "            AND s.origin = com.example.neeews.article.domain.LabelOrigin.AI) " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> findUnlabeledByWithAiLabel(@Param("labeledBy") String labeledBy,
+                                             @Param("round") int round,
+                                             Pageable pageable);
+
+    // 위와 같되 AI가 손대지 않은 기사만 — 오염 없는 정답지를 만들 때
+    @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
+           "(SELECT 1 FROM ArticleImportanceLabel l WHERE l.article = a " +
+           " AND l.labeledBy = :labeledBy AND l.round = :round) " +
+           "AND NOT EXISTS (SELECT 1 FROM ArticleImportanceLabel s WHERE s.article = a " +
+           "                AND s.origin = com.example.neeews.article.domain.LabelOrigin.AI) " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> findUnlabeledByWithoutAiLabel(@Param("labeledBy") String labeledBy,
+                                                @Param("round") int round,
+                                                Pageable pageable);
+
+    // 한 기사에 라벨이 여러 건(AI·사람) 달릴 수 있으므로 DISTINCT 로 중복 행을 막는다
+    @Query("SELECT DISTINCT a FROM Article a JOIN ArticleImportanceLabel l ON l.article = a " +
            "WHERE l.label = :label ORDER BY a.publishedAt DESC")
     Page<Article> findByLabel(@Param("label") Importance label, Pageable pageable);
 }
