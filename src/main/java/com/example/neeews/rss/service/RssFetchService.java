@@ -49,15 +49,15 @@ public class RssFetchService {
     );
 
     private static final Map<String, String> CONTENT_SELECTORS = Map.ofEntries(
-        Map.entry("연합뉴스", "article.story-news"),
+        Map.entry("연합뉴스", "div.story-news"),
         Map.entry("한겨레", "div.article-text"),
         Map.entry("경향신문", "div.art_body"),
         Map.entry("한국경제", "div#articletxt"),
-        Map.entry("전자신문", "div.article_txt"),
+        Map.entry("전자신문", "div.article_body"),
         Map.entry("ZDnet코리아", "div#articleBody"),
         Map.entry("동아일보", "section.news_view"),
         Map.entry("SBS", "div.text_area"),
-        Map.entry("아이뉴스24", "div#articleBody")
+        Map.entry("아이뉴스24", "#articleBody")
         // 조선일보는 본문을 JS로 렌더링해 Jsoup으로 못 읽는다. RSS의 content:encoded로 본문을 받으므로 셀렉터가 필요 없다.
     );
 
@@ -200,6 +200,10 @@ public class RssFetchService {
                     .get();
             String selector = CONTENT_SELECTORS.get(sourceName);
             Element body = selector != null ? doc.selectFirst(selector) : null;
+            if (body == null && selector != null) {
+                // 언론사가 마크업을 바꾸면 폴백이 요약/헤더 블록을 본문으로 저장해버리므로, 셀렉터가 낡았음을 남긴다.
+                log.warn("[본문 크롤링] 셀렉터 미매칭 source={} selector={} url={}", sourceName, selector, url);
+            }
             if (body == null) body = doc.selectFirst("article");
             if (body == null) body = doc.selectFirst("main");
             if (body == null) return null;
