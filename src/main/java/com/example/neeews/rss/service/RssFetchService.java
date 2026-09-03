@@ -61,7 +61,8 @@ public class RssFetchService {
         // 조선일보는 본문을 JS로 렌더링해 Jsoup으로 못 읽는다. RSS의 content:encoded로 본문을 받으므로 셀렉터가 필요 없다.
     );
 
-    @Transactional
+    // 수집 전체를 한 트랜잭션으로 묶지 않는다. 한 기사 저장이 실패하면 영속성 컨텍스트가 깨져
+    // 뒤따르는 소스가 전부 "null identifier"로 연쇄 실패하기 때문이다. 저장은 건별로 커밋한다.
     public int fetchAll() {
         return Arrays.stream(NewsSource.values())
                 .filter(s -> !DEPRECATED_SOURCES.contains(s))
@@ -118,7 +119,6 @@ public class RssFetchService {
         return updated;
     }
 
-    @Transactional
     public int fetchSource(NewsSource source) {
         int saved = 0;
         try {
@@ -132,33 +132,37 @@ public class RssFetchService {
                 if (link == null || articleRepository.existsByLink(link)) {
                     continue;
                 }
-                LocalDateTime publishedAt = resolvePublishedAt(entry);
-                String description = entry.getDescription() != null ? entry.getDescription().getValue() : null;
-                if (description == null || description.isBlank()) description = extractContentEncoded(entry);
-                String author = entry.getAuthor();
-                if (author == null || author.isBlank()) {
-                    author = source.getDisplayName();
+                try {
+                    LocalDateTime publishedAt = resolvePublishedAt(entry);
+                    String description = entry.getDescription() != null ? entry.getDescription().getValue() : null;
+                    if (description == null || description.isBlank()) description = extractContentEncoded(entry);
+                    String author = entry.getAuthor();
+                    if (author == null || author.isBlank()) {
+                        author = source.getDisplayName();
+                    }
+
+                    String category = source.getCategory() != null
+                            ? source.getCategory()
+                            : extractCategory(entry.getCategories());
+
+                    articleRepository.save(Article.builder()
+                            .title(entry.getTitle())
+                            .link(link)
+                            .description(description)
+                            .author(author)
+                            .category(category)
+                            .imageUrl(extractImageUrl(entry))
+                            .source(source)
+                            .publishedAt(publishedAt)
+                            .build());
+                    saved++;
+                } catch (Exception e) {
+                    log.warn("[RSS] {} 기사 저장 실패 link={}", source.getDisplayName(), link, e);
                 }
-
-                String category = source.getCategory() != null
-                        ? source.getCategory()
-                        : extractCategory(entry.getCategories());
-
-                articleRepository.save(Article.builder()
-                        .title(entry.getTitle())
-                        .link(link)
-                        .description(description)
-                        .author(author)
-                        .category(category)
-                        .imageUrl(extractImageUrl(entry))
-                        .source(source)
-                        .publishedAt(publishedAt)
-                        .build());
-                saved++;
             }
             log.info("[RSS] {} - {}건 저장", source.getDisplayName(), saved);
         } catch (Exception e) {
-            log.error("[RSS] {} 수집 실패: {}", source.getDisplayName(), e.getMessage());
+            log.error("[RSS] {} 수집 실패", source.getDisplayName(), e);
         }
         return saved;
     }

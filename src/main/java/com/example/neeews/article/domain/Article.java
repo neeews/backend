@@ -3,6 +3,8 @@ package com.example.neeews.article.domain;
 import com.example.neeews.rss.domain.NewsSource;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -39,8 +41,11 @@ public class Article {
     @Column(length = 1000)
     private String imageUrl;
 
+    // JdbcTypeCode 없이 두면 MySQL enum 컬럼으로 매핑된다. 그러면 NewsSource에 상수를 추가해도
+    // ddl-auto=update가 기존 enum 목록을 갱신하지 못해 새 소스의 기사가 전부 저장 실패한다.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(nullable = false, length = 50)
     private NewsSource source;
 
     private LocalDateTime publishedAt;
