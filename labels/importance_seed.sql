@@ -1,311 +1,319 @@
--- 최신 기사 300건 중요도 라벨 시드 (생성일 2026-09-03, 개정 2026-09-03)
+-- 최신 기사 300건 중요도 라벨 시드 (생성일 2026-09-03, 개정 2026-09-04)
 -- 판정 기준: labels/LABELING_GUIDE.md
 -- 선행 조건: 앱을 재기동해 article_importance_labels 테이블이 만들어져 있어야 하고,
---            migration_20260903_label_provenance.sql 이 적용돼 있어야 한다.
+--            migration_20260903_label_provenance.sql 4번 단계(대리키 PK 교체)가 적용돼 있어야 한다.
+--            (2026-09-04 운영 DB 적용 완료)
 --
 -- 이 라벨을 매긴 주체는 claude-opus-5 다(사람 아님). 그래서 origin='AI' 로 박아 넣는다.
 -- 사람이 매긴 정답지와 섞이면 모델 평가가 "opus 흉내내기 점수"가 되므로 지우지 말 것.
+--
+-- 2026-09-04 개정: MEDIUM 폐지에 따라 2단계(HIGH/LOW)로 전면 재판정했다.
+-- 세계 규칙·증시 규칙 신설과 스포츠 카테고리 제약 제거가 반영돼 있어,
+-- 단순히 MEDIUM 을 HIGH 로 접은 것이 아니라 300건을 다시 매긴 결과다.
+-- 이전 3단계 라벨은 운영 DB 의 article_importance_labels_bak_20260904_pre_v2 에 남아 있다.
+--
+-- 이 300건은 학습 데이터 전용이다. 채점표는 사람이 매긴 별도 84건이며 기사가 겹치지 않는다.
 
-INSERT INTO article_importance_labels (article_id, label, labeled_by, origin, round_no, created_at)
+INSERT INTO article_importance_labels (article_id, label, labeled_by, origin, round_no, guide_version, created_at)
 VALUES
-  (81408, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81434, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81409, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81435, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81410, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81411, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81444, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81403, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81431, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81412, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81436, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81413, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81437, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81414, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81415, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81432, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81404, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81445, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81442, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81398, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81405, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81406, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81438, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81416, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81429, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81439, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81417, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81440, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81418, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81419, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81399, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81420, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81443, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81430, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81400, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81421, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81422, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81361, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81423, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81424, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81425, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81407, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81433, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81327, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81367, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81334, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81336, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81375, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81337, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81335, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81368, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81338, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81318, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81339, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81328, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81319, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81340, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81341, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81342, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81320, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81374, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81343, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81344, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81366, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81345, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81321, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81322, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81371, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81346, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81329, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81347, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81323, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81330, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81348, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81349, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81350, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81324, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81369, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81325, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81351, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81352, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81362, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81353, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81354, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81370, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81372, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81326, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81331, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81363, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81355, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81365, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81356, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81332, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81364, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81333, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81357, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81301, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81261, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81269, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81312, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81988, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81972, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81995, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81996, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81997, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81998, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81991, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81992, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81952, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (82003, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82009, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81973, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (82004, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81945, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81999, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81953, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (82006, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81954, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81974, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81993, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81955, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81975, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81976, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81956, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81957, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81989, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81946, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81977, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81978, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81947, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81951, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81958, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81959, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81960, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81961, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81979, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82007, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81962, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81980, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81981, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82000, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82005, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81982, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81963, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81994, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81948, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81964, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81983, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81965, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81966, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81967, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82001, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81984, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81968, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81990, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81969, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81970, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82002, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81985, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81971, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81949, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81986, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81889, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81893, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81930, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81928, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81907, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81908, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81909, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81894, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81929, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81895, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81938, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81939, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81896, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81910, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81911, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81912, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81931, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81932, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81913, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81897, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81898, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81914, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81890, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81940, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81899, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81900, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81933, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81915, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81916, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81937, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81901, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81902, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81917, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81918, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81903, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81919, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81920, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81891, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81922, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81921, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81904, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81923, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81924, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82010, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81934, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81936, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81941, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81925, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81926, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81905, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81943, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (82011, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (82012, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81906, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81935, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82013, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81944, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81876, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81877, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81860, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81875, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81880, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (82014, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81861, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81862, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81884, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81881, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81869, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81882, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81863, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81864, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81870, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81865, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81866, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81885, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81871, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81867, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81872, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81888, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81873, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81878, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81868, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81874, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81879, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81830, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81843, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81831, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81832, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81854, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81844, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81829, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81858, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81828, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81837, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81838, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81833, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81839, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81855, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81850, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81834, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81835, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81840, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81836, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81845, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81846, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81841, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81847, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81848, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81842, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81851, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81849, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81852, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81853, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81856, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81826, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81857, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81813, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81825, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81808, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81821, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81820, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81810, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81886, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81814, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81822, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81823, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81811, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81815, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81827, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81824, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81887, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81819, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81809, 'MEDIUM', 'claude-opus-5', 'AI', 0, NOW()),
-  (81816, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81812, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81796, 'HIGH', 'claude-opus-5', 'AI', 0, NOW()),
-  (81817, 'LOW', 'claude-opus-5', 'AI', 0, NOW()),
-  (81803, 'LOW', 'claude-opus-5', 'AI', 0, NOW())
-ON DUPLICATE KEY UPDATE label = VALUES(label), updated_at = NOW();
+  (81261, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81269, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81301, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81312, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81318, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81319, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81320, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81321, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81322, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81323, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81324, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81325, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81326, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81327, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81328, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81329, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81330, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81331, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81332, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81333, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81334, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81335, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81336, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81337, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81338, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81339, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81340, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81341, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81342, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81343, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81344, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81345, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81346, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81347, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81348, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81349, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81350, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81351, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81352, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81353, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81354, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81355, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81356, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81357, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81361, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81362, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81363, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81364, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81365, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81366, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81367, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81368, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81369, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81370, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81371, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81372, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81374, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81375, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81398, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81399, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81400, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81403, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81404, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81405, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81406, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81407, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81408, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81409, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81410, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81411, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81412, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81413, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81414, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81415, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81416, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81417, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81418, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81419, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81420, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81421, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81422, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81423, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81424, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81425, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81429, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81430, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81431, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81432, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81433, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81434, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81435, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81436, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81437, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81438, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81439, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81440, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81442, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81443, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81444, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81445, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81796, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81803, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81808, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81809, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81810, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81811, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81812, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81813, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81814, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81815, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81816, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81817, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81819, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81820, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81821, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81822, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81823, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81824, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81825, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81826, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81827, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81828, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81829, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81830, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81831, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81832, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81833, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81834, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81835, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81836, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81837, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81838, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81839, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81840, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81841, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81842, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81843, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81844, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81845, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81846, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81847, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81848, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81849, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81850, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81851, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81852, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81853, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81854, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81855, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81856, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81857, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81858, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81860, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81861, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81862, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81863, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81864, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81865, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81866, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81867, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81868, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81869, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81870, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81871, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81872, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81873, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81874, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81875, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81876, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81877, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81878, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81879, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81880, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81881, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81882, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81884, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81885, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81886, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81887, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81888, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81889, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81890, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81891, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81893, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81894, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81895, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81896, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81897, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81898, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81899, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81900, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81901, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81902, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81903, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81904, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81905, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81906, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81907, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81908, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81909, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81910, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81911, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81912, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81913, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81914, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81915, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81916, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81917, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81918, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81919, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81920, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81921, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81922, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81923, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81924, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81925, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81926, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81928, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81929, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81930, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81931, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81932, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81933, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81934, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81935, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81936, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81937, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81938, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81939, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81940, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81941, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81943, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81944, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81945, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81946, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81947, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81948, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81949, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81951, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81952, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81953, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81954, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81955, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81956, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81957, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81958, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81959, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81960, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81961, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81962, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81963, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81964, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81965, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81966, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81967, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81968, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81969, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81970, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81971, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81972, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81973, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81974, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81975, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81976, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81977, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81978, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81979, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81980, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81981, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81982, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81983, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81984, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81985, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81986, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81988, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81989, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81990, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81991, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81992, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81993, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81994, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81995, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81996, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81997, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81998, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(81999, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82000, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82001, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82002, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82003, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82004, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82005, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82006, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82007, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82009, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82010, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82011, 'HIGH', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82012, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82013, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+  ,(82014, 'LOW', 'claude-opus-5', 'AI', 0, '2026-09-04-2class', NOW())
+;
