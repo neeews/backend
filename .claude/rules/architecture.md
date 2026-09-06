@@ -23,7 +23,7 @@ com.example.neeews.<domain>/
 - `security` — 인증/인가 관련 (JWT 필터, 유틸)
 - `exception` — 전역 예외 처리
 
-현재 도메인: `article`, `articleread`, `auth`, `bookmark`, `rss`, `search`, `suggestion`, `user`, `admin`
+현재 도메인: `article`, `articleread`, `auth`, `bookmark`, `rss`, `search`, `suggestion`, `user`, `admin`, `schedule`
 
 ## Layering Rules
 
