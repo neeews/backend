@@ -67,6 +67,19 @@ public class Article {
 
     private LocalDateTime aiSummarizedAt;
 
+    // 서비스 노출용 중요도. 라벨링 데이터셋(article_importance_labels)과 분리해 둔다.
+    // 같은 테이블에 쌓으면 모델 학습·채점용 라벨과 섞여 채점이 오염된다.
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "ai_importance", length = 10)
+    private Importance aiImportance;
+
+    // muni가 매긴 '중요' 확률(0~1). 등급은 노출 여부만 가르므로, 같은 등급 안의 순위는 이 값으로 매긴다.
+    // 규칙 필터로 확정된 기사는 모델을 안 거쳐 null 이다.
+    private Double aiImportanceScore;
+
+    private LocalDateTime aiImportanceAt;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean contentCrawled = false;
@@ -114,5 +127,11 @@ public class Article {
 
     public void updateCategory(String category) {
         this.category = category;
+    }
+
+    public void updateAiImportance(Importance aiImportance, Double aiImportanceScore) {
+        this.aiImportance = aiImportance;
+        this.aiImportanceScore = aiImportanceScore;
+        this.aiImportanceAt = LocalDateTime.now();
     }
 }

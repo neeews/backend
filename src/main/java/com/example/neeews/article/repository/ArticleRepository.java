@@ -140,4 +140,22 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("SELECT DISTINCT a FROM Article a JOIN ArticleImportanceLabel l ON l.article = a " +
            "WHERE l.label = :label ORDER BY a.publishedAt DESC")
     Page<Article> findByLabel(@Param("label") Importance label, Pageable pageable);
+
+    @Query("SELECT a FROM Article a WHERE a.aiImportance IS NULL AND a.publishedAt >= :from " +
+           "AND a.category IS NOT NULL ORDER BY a.publishedAt DESC")
+    List<Article> findUnjudged(@Param("from") LocalDateTime from, Pageable pageable);
+
+    @Query("SELECT DISTINCT a.category FROM Article a " +
+           "WHERE a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "AND a.publishedAt >= :from AND a.category IS NOT NULL")
+    List<String> findHeadlineCategories(@Param("from") LocalDateTime from);
+
+    @Query("SELECT a FROM Article a WHERE a.category = :category AND a.publishedAt >= :from " +
+           "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
+    List<Article> findHeadlines(@Param("category") String category,
+                                @Param("from") LocalDateTime from,
+                                Pageable pageable);
+
+    long countByAiImportanceIsNullAndPublishedAtAfter(LocalDateTime from);
 }

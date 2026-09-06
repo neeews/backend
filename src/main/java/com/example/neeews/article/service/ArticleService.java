@@ -4,6 +4,7 @@ import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
+import com.example.neeews.article.dto.response.HeadlineSectionResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.bookmark.service.BookmarkService;
@@ -22,9 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +39,10 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
+
+    private static final int HEADLINES_PER_CATEGORY = 5;
+    private static final List<String> CATEGORY_ORDER =
+            List.of("정치", "경제", "사회", "세계", "IT/과학", "생활/문화", "연예/문화", "스포츠");
 
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
@@ -63,6 +70,28 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public List<ArticleResponse> getLatestArticles(String email) {
         return toResponses(articleRepository.findTop5ByOrderByPublishedAtDesc(), email);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HeadlineSectionResponse> getHeadlines(String email) {
+        LocalDateTime from = LocalDate.now().atStartOfDay();
+        Pageable limit = PageRequest.of(0, HEADLINES_PER_CATEGORY);
+
+        List<String> categories = new ArrayList<>(articleRepository.findHeadlineCategories(from));
+        categories.sort(Comparator.comparingInt(ArticleService::categoryOrder));
+
+        List<HeadlineSectionResponse> sections = new ArrayList<>();
+        for (String category : categories) {
+            List<Article> articles = articleRepository.findHeadlines(category, from, limit);
+            if (articles.isEmpty()) continue;
+            sections.add(HeadlineSectionResponse.of(category, toResponses(articles, email)));
+        }
+        return sections;
+    }
+
+    private static int categoryOrder(String category) {
+        int index = CATEGORY_ORDER.indexOf(category);
+        return index < 0 ? CATEGORY_ORDER.size() : index;
     }
 
     @Transactional(readOnly = true)
