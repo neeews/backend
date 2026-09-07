@@ -24,6 +24,10 @@ public class ArticleImportanceAiService {
     private final RssFetchService rssFetchService;
     private final MuniClient muniClient;
 
+    // 인기 목록이 최근 7일치를 보여주므로 판정 대상도 같은 창으로 맞춘다.
+    // 이보다 좁으면 목록에 오르는 기사 중 일부가 영구히 미판정으로 남는다.
+    private static final int JUDGE_WINDOW_DAYS = 7;
+
     @Value("${app.importance.max-per-run}")
     private int maxPerRun;
 
@@ -34,7 +38,7 @@ public class ArticleImportanceAiService {
     private double threshold;
 
     public void judgeBatch() {
-        LocalDateTime from = LocalDate.now().atStartOfDay();
+        LocalDateTime from = LocalDate.now().minusDays(JUDGE_WINDOW_DAYS).atStartOfDay();
         List<Article> candidates =
                 articleRepository.findUnjudged(from, PageRequest.of(0, maxPerRun));
         if (candidates.isEmpty()) {
