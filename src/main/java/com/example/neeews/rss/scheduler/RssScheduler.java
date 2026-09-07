@@ -16,7 +16,8 @@ public class RssScheduler {
     private final RssFetchService rssFetchService;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Scheduled(fixedDelay = 30 * 60 * 1000)
+    // fixedDelay라 앞 수집이 끝난 시점부터 잰다. 수집이 오래 걸려도 다음 실행과 겹치지 않는다.
+    @Scheduled(fixedDelayString = "${app.rss.fetch-interval-ms}")
     public void fetchRss() {
         log.info("[RSS 스케줄러] RSS 수집 시작");
         int total = rssFetchService.fetchAll();
