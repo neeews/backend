@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -20,8 +21,10 @@ public class MuniClient {
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(120);
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
-    public MuniClient(@Value("${app.importance.muni-url}") String muniUrl) {
+    public MuniClient(@Value("${app.importance.muni-url}") String muniUrl, ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
         factory.setReadTimeout(READ_TIMEOUT);
@@ -34,10 +37,14 @@ public class MuniClient {
     // 기사 텍스트마다 '중요' 확률(0~1)을 돌려준다. 호출이 실패하면 null — 호출부가 다음 배치로 미룬다.
     public List<Double> score(List<String> texts) {
         try {
+            // muni는 파이썬 http.server라 chunked 전송을 못 읽는다. 객체를 그대로 넘기면 스트리밍으로 나가
+            // Content-Length가 빠지고 muni가 400을 준다. 미리 직렬화한 바이트로 보내야 길이가 실린다.
+            byte[] payload = objectMapper.writeValueAsBytes(Map.of("texts", texts));
+
             MuniResponse body = restClient.post()
                     .uri("/predict")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("texts", texts))
+                    .body(payload)
                     .retrieve()
                     .body(MuniResponse.class);
 
