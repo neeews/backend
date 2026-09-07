@@ -40,7 +40,6 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       BASE_URL: ${BASE_URL}
       MUNI_URL: ${MUNI_URL:-http://127.0.0.1:8000}
-      NEIS_API_KEY: ${NEIS_API_KEY:-}
     volumes:
       - /home/ubuntu/images/articles:/app/images/articles
 
