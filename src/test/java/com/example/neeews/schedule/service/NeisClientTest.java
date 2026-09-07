@@ -4,7 +4,10 @@ import com.example.neeews.schedule.dto.response.ScheduleResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.http.MediaType;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -76,6 +79,24 @@ class NeisClientTest {
                         """, MediaType.APPLICATION_JSON));
 
         assertThat(neisClient.fetchSchedules(FROM, TO)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("생성자가 둘이라도 스프링이 주입용 생성자를 고른다")
+    void 빈으로_등록된다() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("app.neis.base-url", "https://open.neis.go.kr")
+                .withProperty("app.neis.api-key", "")
+                .withProperty("app.neis.office-code", "F10")
+                .withProperty("app.neis.school-code", "7140392");
+
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.setEnvironment(environment);
+            context.register(PropertySourcesPlaceholderConfigurer.class, NeisClient.class);
+            context.refresh();
+
+            assertThat(context.getBean(NeisClient.class)).isNotNull();
+        }
     }
 
     @Test

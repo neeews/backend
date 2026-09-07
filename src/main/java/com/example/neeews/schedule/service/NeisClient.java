@@ -2,6 +2,7 @@ package com.example.neeews.schedule.service;
 
 import com.example.neeews.schedule.dto.response.ScheduleResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,8 @@ public class NeisClient {
     private final String officeCode;
     private final String schoolCode;
 
+    // 테스트용 생성자가 따로 있어 Spring이 어느 쪽을 쓸지 알 수 없다. 주입 대상을 명시한다.
+    @Autowired
     public NeisClient(@Value("${app.neis.base-url}") String baseUrl,
                       @Value("${app.neis.api-key}") String apiKey,
                       @Value("${app.neis.office-code}") String officeCode,
