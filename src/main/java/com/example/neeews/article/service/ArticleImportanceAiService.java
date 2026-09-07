@@ -3,6 +3,7 @@ package com.example.neeews.article.service;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.domain.Importance;
 import com.example.neeews.article.repository.ArticleRepository;
+import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,16 +34,12 @@ public class ArticleImportanceAiService {
     private static final Pattern TARGET_PRICE_LOW = Pattern.compile(
             "^[가-힣A-Za-z]+(증권|투자증권|자산운용)[ ,\"]|목표주가|목표가");
 
-    private static final int MIN_BODY_LENGTH = 20;
-
     private final ArticleRepository articleRepository;
+    private final RssFetchService rssFetchService;
     private final MuniClient muniClient;
 
     @Value("${app.importance.max-per-run}")
     private int maxPerRun;
-
-    @Value("${app.importance.max-input-length}")
-    private int maxInputLength;
 
     @Value("${app.importance.batch-size}")
     private int batchSize;
@@ -118,12 +115,24 @@ public class ArticleImportanceAiService {
 
     // muni는 "제목 줄바꿈 본문" 형태로 학습됐다. 입력 형식을 바꾸면 판정도 같이 흔들린다.
     private String toInput(Article article) {
-        return article.getTitle() + "\n" + truncate(stripHtml(article.getDescription()));
+        return article.getTitle() + "\n" + resolveBody(article);
     }
 
-    private String truncate(String body) {
-        if (body == null || body.length() < MIN_BODY_LENGTH) return "";
-        return body.length() > maxInputLength ? body.substring(0, maxInputLength) : body;
+    // RSS description은 한두 문장뿐이라 muni가 본문으로 받지 않는다. 원문을 크롤링해 길이 제한 없이 통째로 넘긴다.
+    private String resolveBody(Article article) {
+        String existing = stripHtml(article.getDescription());
+        if (article.isContentCrawled()) return existing == null ? "" : existing;
+
+        String crawled = stripHtml(rssFetchService.crawlArticleContent(
+                article.getLink(), article.getSource().getDisplayName()));
+        if (crawled == null || crawled.isBlank()) return existing == null ? "" : existing;
+
+        // 크롤링 결과를 저장해 두면 요약 배치가 같은 기사를 다시 크롤링하지 않는다.
+        articleRepository.findById(article.getId()).ifPresent(found -> {
+            found.updateDescription(crawled);
+            articleRepository.save(found);
+        });
+        return crawled;
     }
 
     private String stripHtml(String text) {
