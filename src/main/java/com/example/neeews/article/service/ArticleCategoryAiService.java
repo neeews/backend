@@ -13,19 +13,23 @@ import org.springframework.web.util.HtmlUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleCategoryAiService {
 
-    // 카테고리 이름을 그대로 답하게 하면 "연예/문화"를 "문화"로 줄여 쓰는 식의 변형이 섞여 파싱이 자주 깨진다.
-    // 번호로 답하게 하면 응답에서 숫자 하나만 뽑으면 되고, 목록 밖 값도 범위 검사로 걸러진다.
-    private static final String PROMPT_HEADER = """
-            다음 뉴스 기사가 어느 분야인지 아래 번호 중 하나로 답해라.
-            숫자 하나만 답하고 다른 말은 붙이지 마라.
+    // 번호로 답하게 했더니 exaone이 내용과 무관하게 마지막 번호(7. IT/과학)를 찍었다.
+    // 같은 기사 10건으로 재보니 번호 2건 정답, 이름 8건 정답이라 이름을 그대로 답하게 한다.
+    private static final String PROMPT_HEADER = "다음 뉴스 기사의 분야를 아래 목록에서 정확히 하나 고르라.\n목록: ";
+    private static final String PROMPT_RULE =
+            "\n목록에 있는 이름을 그대로 답하고 다른 말은 붙이지 마라.\n";
 
-            """;
+    // 모델이 이름을 줄여 답할 때를 살린다. 목록에 있는 이름이 먼저 잡히면 여기까지 오지 않는다.
+    private static final Map<String, String> CATEGORY_ALIASES = Map.of(
+            "연예", "연예/문화", "문화", "연예/문화",
+            "IT", "IT/과학", "과학", "IT/과학", "국제", "세계");
 
     // 분류가 밀려도 이 창을 넘긴 기사는 포기한다. 목록에 오르는 기사는 대부분 오늘·어제 것이라
     // 오래된 기사를 붙들고 있으면 새로 들어온 기사가 계속 뒤로 밀린다.
@@ -70,14 +74,10 @@ public class ArticleCategoryAiService {
     }
 
     private String prompt(List<String> categories, Article article) {
-        StringBuilder sb = new StringBuilder(PROMPT_HEADER);
-        for (int i = 0; i < categories.size(); i++) {
-            sb.append(i + 1).append(". ").append(categories.get(i)).append('\n');
-        }
-        sb.append("\n제목: ").append(article.getTitle())
-                .append("\n본문: ").append(body(article))
-                .append("\n\n번호:");
-        return sb.toString();
+        return PROMPT_HEADER + String.join(", ", categories) + PROMPT_RULE
+                + "\n제목: " + article.getTitle()
+                + "\n본문: " + body(article)
+                + "\n\n분야:";
     }
 
     // 본문은 중요도 배치가 크롤링해 description에 저장해 둔 것을 쓴다. 여기서 다시 크롤링하지 않는다 —
@@ -89,15 +89,29 @@ public class ArticleCategoryAiService {
         return stripped.length() > MAX_BODY_LENGTH ? stripped.substring(0, MAX_BODY_LENGTH) : stripped;
     }
 
+    // 모델이 "환경 문제를 다루므로 사회"처럼 문장으로 답하기도 해서, 가장 먼저 등장하는 이름을 고른다.
     private String parseCategory(String answer, List<String> categories) {
-        if (answer == null) return null;
-        for (int i = 0; i < answer.length(); i++) {
-            char c = answer.charAt(i);
-            if (c < '0' || c > '9') continue;
-            int index = c - '1';
-            return index >= 0 && index < categories.size() ? categories.get(index) : null;
+        if (answer == null || answer.isBlank()) return null;
+
+        String best = null;
+        int bestIndex = Integer.MAX_VALUE;
+        for (String category : categories) {
+            int index = answer.indexOf(category);
+            if (index >= 0 && index < bestIndex) {
+                bestIndex = index;
+                best = category;
+            }
         }
-        return null;
+        if (best != null) return best;
+
+        for (Map.Entry<String, String> alias : CATEGORY_ALIASES.entrySet()) {
+            int index = answer.indexOf(alias.getKey());
+            if (index >= 0 && index < bestIndex && categories.contains(alias.getValue())) {
+                bestIndex = index;
+                best = alias.getValue();
+            }
+        }
+        return best;
     }
 
     // save()가 자체 트랜잭션으로 건별 커밋하므로 여기에 @Transactional을 걸지 않는다.

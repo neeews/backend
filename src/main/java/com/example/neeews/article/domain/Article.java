@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Article {
 
+    private static final int MAX_DESCRIPTION_LENGTH = 15_000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -116,8 +118,16 @@ public class Article {
     }
 
     public void updateDescription(String description) {
-        this.description = description;
+        this.description = truncateToColumnLimit(description);
         this.contentCrawled = true;
+    }
+
+    // description은 TEXT(65,535바이트)라 이를 넘기면 UPDATE 자체가 거부돼 배치가 통째로 죽는다.
+    // 한글은 3바이트, 이모지는 4바이트라 문자 수로 자를 땐 최악(4바이트)을 기준으로 잡는다.
+    // 본문이 이 길이를 넘는 기사는 크롤러가 페이지 전체를 긁어온 경우라 잘라도 본문이 잘리지 않는다.
+    private static String truncateToColumnLimit(String description) {
+        if (description == null || description.length() <= MAX_DESCRIPTION_LENGTH) return description;
+        return description.substring(0, MAX_DESCRIPTION_LENGTH);
     }
 
     public void markContentCrawled() {

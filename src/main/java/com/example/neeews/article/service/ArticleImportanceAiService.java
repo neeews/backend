@@ -92,10 +92,15 @@ public class ArticleImportanceAiService {
         if (crawled == null || crawled.isBlank()) return existing == null ? "" : existing;
 
         // 크롤링 결과를 저장해 두면 요약 배치가 같은 기사를 다시 크롤링하지 않는다.
-        articleRepository.findById(article.getId()).ifPresent(found -> {
-            found.updateDescription(crawled);
-            articleRepository.save(found);
-        });
+        // 저장은 판정에 필수가 아니므로, 실패해도 삼키고 판정은 그대로 진행한다.
+        try {
+            articleRepository.findById(article.getId()).ifPresent(found -> {
+                found.updateDescription(crawled);
+                articleRepository.save(found);
+            });
+        } catch (Exception e) {
+            log.warn("[주요기사] 본문 저장 실패 id={}: {}", article.getId(), e.getMessage());
+        }
         return crawled;
     }
 
