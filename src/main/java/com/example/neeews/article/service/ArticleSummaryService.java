@@ -74,7 +74,7 @@ public class ArticleSummaryService {
         LocalDateTime since = LocalDateTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
         Map<String, LocalDateTime> lastSummarized = lastSummarizedAtByCategory();
 
-        List<String> categories = new ArrayList<>(activeCategories());
+        List<String> categories = new ArrayList<>(NewsSource.activeCategories());
         categories.sort(Comparator.comparing(
                 c -> lastSummarized.getOrDefault(c, LocalDateTime.MIN)));
 
@@ -86,14 +86,6 @@ public class ArticleSummaryService {
             candidate.ifPresent(picked::add);
         }
         return picked;
-    }
-
-    private List<String> activeCategories() {
-        return java.util.Arrays.stream(NewsSource.values())
-                .map(NewsSource::getCategory)
-                .filter(c -> !"종합".equals(c))
-                .distinct()
-                .toList();
     }
 
     private Map<String, LocalDateTime> lastSummarizedAtByCategory() {

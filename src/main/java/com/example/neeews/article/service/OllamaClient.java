@@ -55,7 +55,7 @@ public class OllamaClient {
             if (body == null || body.response() == null || body.response().isBlank()) return null;
             return body.response().trim();
         } catch (Exception e) {
-            log.warn("[요약] Ollama 호출 실패 model={}: {}", model, e.getMessage());
+            log.warn("[Ollama] 호출 실패 model={}: {}", model, e.getMessage());
             return null;
         }
     }

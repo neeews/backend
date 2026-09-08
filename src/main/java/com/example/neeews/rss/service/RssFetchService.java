@@ -106,6 +106,8 @@ public class RssFetchService {
         List<Article> all = articleRepository.findAll();
         int updated = 0;
         for (Article article : all) {
+            // 분류 배치가 본문을 보고 정한 카테고리는 되돌리지 않는다. 피드 고정값으로 덮으면 재분류가 무의미해진다.
+            if (article.getAiCategoryAt() != null) continue;
             String current = article.getCategory();
             String correct = current != null
                     ? CATEGORY_MAP.getOrDefault(current, article.getSource().getCategory())

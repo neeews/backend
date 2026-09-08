@@ -2,6 +2,9 @@ package com.example.neeews.rss.domain;
 
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Getter
 public enum NewsSource {
 
@@ -61,6 +64,9 @@ public enum NewsSource {
     // 피드가 2025-03-19 이후 갱신 중단 — 수집 대상에서 제외했으나 기존 DB 데이터 호환용으로 남긴다
     KHAN_IT("경향신문", "https://www.khan.co.kr/rss/rssdata/it_news.xml", "IT/과학");
 
+    // "종합"은 수집을 끊은 통합 피드에만 남은 값이라 서비스가 쓰는 카테고리 목록에서 뺀다.
+    private static final String LEGACY_CATEGORY = "종합";
+
     private final String displayName;
     private final String rssUrl;
     private final String category;
@@ -69,5 +75,13 @@ public enum NewsSource {
         this.displayName = displayName;
         this.rssUrl = rssUrl;
         this.category = category;
+    }
+
+    public static List<String> activeCategories() {
+        return Arrays.stream(values())
+                .map(NewsSource::getCategory)
+                .filter(c -> !LEGACY_CATEGORY.equals(c))
+                .distinct()
+                .toList();
     }
 }

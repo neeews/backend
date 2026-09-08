@@ -80,6 +80,10 @@ public class Article {
 
     private LocalDateTime aiImportanceAt;
 
+    // 카테고리는 RSS 피드마다 박힌 고정값으로 먼저 채워지고, 분류 배치가 본문을 보고 다시 정한다.
+    // 이 값이 차 있으면 category가 모델이 정한 값이라는 뜻이다. 피드 원본 값은 source에서 언제든 되찾을 수 있다.
+    private LocalDateTime aiCategoryAt;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean contentCrawled = false;
@@ -127,6 +131,11 @@ public class Article {
 
     public void updateCategory(String category) {
         this.category = category;
+    }
+
+    public void updateAiCategory(String category) {
+        this.category = category;
+        this.aiCategoryAt = LocalDateTime.now();
     }
 
     public void updateAiImportance(Importance aiImportance, Double aiImportanceScore) {
