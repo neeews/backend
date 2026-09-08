@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.Importance;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
@@ -31,6 +32,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -104,16 +106,23 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
+        LocalDateTime fallbackFrom = LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS);
         List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
-        if (articles.size() < HOT_ARTICLE_COUNT) {
-            Set<Long> ids = articles.stream().map(Article::getId).collect(Collectors.toSet());
-            for (Article a : articleRepository.findTop6ByPublishedAtAfterOrderByPublishedAtDesc(
-                    LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS))) {
-                if (articles.size() >= HOT_ARTICLE_COUNT) break;
-                if (ids.add(a.getId())) articles.add(a);
-            }
-        }
+        fill(articles, () -> articleRepository.findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
+                Importance.HIGH, fallbackFrom));
+        // muni 장애로 판정이 밀리면 HIGH만으로는 못 채운다. LOW로 확정된 기사를 올리느니 아직 판정 전인 최신 기사로 남은 칸을 메운다.
+        fill(articles, () -> articleRepository.findTop6ByAiImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
+                fallbackFrom));
         return toResponses(articles, email);
+    }
+
+    private void fill(List<Article> target, Supplier<List<Article>> source) {
+        if (target.size() >= HOT_ARTICLE_COUNT) return;
+        Set<Long> ids = target.stream().map(Article::getId).collect(Collectors.toSet());
+        for (Article article : source.get()) {
+            if (target.size() >= HOT_ARTICLE_COUNT) break;
+            if (ids.add(article.getId())) target.add(article);
+        }
     }
 
     // 급상승 주제별 기사 목록을 라운드로빈으로 섞어 여러 이슈가 골고루 노출되게 담는다.

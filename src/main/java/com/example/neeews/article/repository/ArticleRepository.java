@@ -27,11 +27,17 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
-    List<Article> findTop6ByPublishedAtAfterOrderByPublishedAtDesc(LocalDateTime after);
+    List<Article> findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
+            Importance aiImportance, LocalDateTime after);
+
+    List<Article> findTop6ByAiImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(LocalDateTime after);
 
     List<Article> findTop5ByCategoryAndIdNotOrderByPublishedAtDesc(String category, Long id);
 
-    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since AND " +
+    // 핫이슈는 급상승 주제 안에서도 muni가 HIGH로 본 기사만 올린다.
+    // 주제 키워드는 전체 기사에서 뽑히므로, 중요도를 안 보면 같은 단어를 쓴 지자체·기업 홍보물이 그대로 올라온다.
+    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :since " +
+                  "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH AND " +
                   "(LOWER(a.title) LIKE LOWER(CONCAT('%', :word, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :word, '%'))) " +
                   "ORDER BY a.publishedAt DESC")
     List<Article> findTopByTopicSince(@Param("word") String word, @Param("since") LocalDateTime since, Pageable pageable);
