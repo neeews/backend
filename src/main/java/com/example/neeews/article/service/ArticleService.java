@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,6 +47,15 @@ public class ArticleService {
     private static final int HEADLINES_PER_CATEGORY = 5;
     private static final List<String> CATEGORY_ORDER =
             List.of("정치", "경제", "사회", "세계", "IT/과학", "생활/문화", "연예/문화", "스포츠");
+
+    // 같은 사건을 여러 매체가 쓰면 muni 점수도 나란히 높게 나와 상위 칸이 한 사건으로 채워진다.
+    // 제목 문자 bigram이 짧은 쪽 기준으로 이 비율 이상 겹치면 같은 사건으로 본다.
+    // 오늘 노출된 제목 80건을 쌍으로 재보니 0.45 이상은 전부 같은 사건이었고, 그 아래로는
+    // "잠수사 숨져" / "묘지 작업 중 숨져"처럼 표현만 닮은 다른 사건이 섞이기 시작했다.
+    private static final double SAME_EVENT_TITLE_OVERLAP = 0.45;
+    private static final int HEADLINE_CANDIDATE_LIMIT = HEADLINES_PER_CATEGORY * 4;
+    private static final Pattern BRACKET_TAG = Pattern.compile("\\[[^\\]]*\\]");
+    private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^0-9A-Za-z가-힣]");
 
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
@@ -77,14 +88,15 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public List<HeadlineSectionResponse> getHeadlines(String email) {
         LocalDateTime from = LocalDate.now().atStartOfDay();
-        Pageable limit = PageRequest.of(0, HEADLINES_PER_CATEGORY);
+        Pageable limit = PageRequest.of(0, HEADLINE_CANDIDATE_LIMIT);
 
         List<String> categories = new ArrayList<>(articleRepository.findHeadlineCategories(from));
         categories.sort(Comparator.comparingInt(ArticleService::categoryOrder));
 
         List<HeadlineSectionResponse> sections = new ArrayList<>();
         for (String category : categories) {
-            List<Article> articles = articleRepository.findHeadlines(category, from, limit);
+            List<Article> articles = distinctEvents(
+                    articleRepository.findHeadlines(category, from, limit), HEADLINES_PER_CATEGORY);
             if (articles.isEmpty()) continue;
             sections.add(HeadlineSectionResponse.of(category, toResponses(articles, email)));
         }
@@ -121,8 +133,45 @@ public class ArticleService {
         Set<Long> ids = target.stream().map(Article::getId).collect(Collectors.toSet());
         for (Article article : source.get()) {
             if (target.size() >= HOT_ARTICLE_COUNT) break;
-            if (ids.add(article.getId())) target.add(article);
+            if (ids.contains(article.getId()) || isSameEventAsAny(article, target)) continue;
+            ids.add(article.getId());
+            target.add(article);
         }
+    }
+
+    private static List<Article> distinctEvents(List<Article> candidates, int limit) {
+        List<Article> picked = new ArrayList<>();
+        for (Article candidate : candidates) {
+            if (picked.size() >= limit) break;
+            if (!isSameEventAsAny(candidate, picked)) picked.add(candidate);
+        }
+        return picked;
+    }
+
+    private static boolean isSameEventAsAny(Article candidate, List<Article> picked) {
+        Set<String> bigrams = titleBigrams(candidate.getTitle());
+        return picked.stream()
+                .anyMatch(p -> overlapRatio(bigrams, titleBigrams(p.getTitle())) >= SAME_EVENT_TITLE_OVERLAP);
+    }
+
+    // 자카드 대신 짧은 쪽 기준 겹침 비율을 쓴다. 같은 사건이라도 매체마다 제목 길이가 두 배씩
+    // 차이 나서, 합집합으로 나누면 제목이 긴 쪽 때문에 값이 절반으로 깎인다.
+    private static double overlapRatio(Set<String> a, Set<String> b) {
+        if (a.isEmpty() || b.isEmpty()) return 0;
+        long common = a.stream().filter(b::contains).count();
+        return (double) common / Math.min(a.size(), b.size());
+    }
+
+    private static Set<String> titleBigrams(String title) {
+        if (title == null) return Set.of();
+        String cleaned = BRACKET_TAG.matcher(HtmlUtils.htmlUnescape(title)).replaceAll("");
+        String normalized = NON_ALPHANUMERIC.matcher(cleaned).replaceAll("").toLowerCase();
+        if (normalized.length() < 2) return normalized.isEmpty() ? Set.of() : Set.of(normalized);
+        Set<String> bigrams = new HashSet<>();
+        for (int i = 0; i < normalized.length() - 1; i++) {
+            bigrams.add(normalized.substring(i, i + 2));
+        }
+        return bigrams;
     }
 
     // 급상승 주제별 기사 목록을 라운드로빈으로 섞어 여러 이슈가 골고루 노출되게 담는다.
@@ -141,9 +190,9 @@ public class ArticleService {
             for (List<Article> topicArticles : perTopic) {
                 if (i >= topicArticles.size() || result.size() >= HOT_ARTICLE_COUNT) continue;
                 Article a = topicArticles.get(i);
-                if (ids.add(a.getId())) {
-                    result.add(a);
-                }
+                if (ids.contains(a.getId()) || isSameEventAsAny(a, result)) continue;
+                ids.add(a.getId());
+                result.add(a);
             }
         }
         return result;
