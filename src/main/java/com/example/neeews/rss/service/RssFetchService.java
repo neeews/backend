@@ -16,8 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
 public class RssFetchService {
 
     private final ArticleRepository articleRepository;
+    private final ObjectMapper objectMapper;
 
     private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
 
@@ -58,8 +63,17 @@ public class RssFetchService {
         Map.entry("동아일보", "section.news_view"),
         Map.entry("SBS", "div.text_area"),
         Map.entry("아이뉴스24", "#articleBody")
-        // 조선일보는 본문을 JS로 렌더링해 Jsoup으로 못 읽는다. RSS의 content:encoded로 본문을 받으므로 셀렉터가 필요 없다.
+        // 조선일보는 CSS 셀렉터로 못 잡는다. crawlChosunContent가 Fusion 메타데이터에서 본문을 꺼낸다.
     );
+
+    // 크롤러를 고치기 전에 수집돼 본문이 RSS 요약뿐인 기사를 다시 긁을 때 쓰는 한도.
+    // 한 번에 다 돌면 요청이 몇 분씩 걸려, 나눠 호출하도록 건수를 끊는다.
+    private static final int RECRAWL_WINDOW_DAYS = 7;
+    private static final int RECRAWL_MAX_PER_RUN = 200;
+
+    private static final String CHOSUN = "조선일보";
+    private static final String FUSION_CONTENT_START = "Fusion.globalContent=";
+    private static final String FUSION_CONTENT_END = "};Fusion.globalContentConfig";
 
     // 수집 전체를 한 트랜잭션으로 묶지 않는다. 한 기사 저장이 실패하면 영속성 컨텍스트가 깨져
     // 뒤따르는 소스가 전부 "null identifier"로 연쇄 실패하기 때문이다. 저장은 건별로 커밋한다.
@@ -118,6 +132,25 @@ public class RssFetchService {
             }
         }
         log.info("[카테고리 정규화] 전체 {}건 중 {}건 수정", all.size(), updated);
+        return updated;
+    }
+
+    // 건별로 커밋한다 — 수백 건을 한 트랜잭션으로 묶으면 크롤링이 끝날 때까지 커넥션을 잡고 있게 된다.
+    public int recrawlMissingContent(NewsSource source) {
+        List<Article> targets = articleRepository
+                .findBySourceAndContentCrawledFalseAndPublishedAtAfterOrderByPublishedAtDesc(
+                        source, LocalDateTime.now().minusDays(RECRAWL_WINDOW_DAYS),
+                        PageRequest.of(0, RECRAWL_MAX_PER_RUN));
+
+        int updated = 0;
+        for (Article article : targets) {
+            String body = crawlArticleContent(article.getLink(), source.getDisplayName());
+            if (body == null || body.isBlank()) continue;
+            article.updateDescription(body);
+            articleRepository.save(article);
+            updated++;
+        }
+        log.info("[본문 재크롤링] {} 대상 {}건 중 {}건 갱신", source.getDisplayName(), targets.size(), updated);
         return updated;
     }
 
@@ -204,6 +237,8 @@ public class RssFetchService {
                     .userAgent("Mozilla/5.0 (compatible; NeeewsBot/1.0)")
                     .timeout(10_000)
                     .get();
+            if (CHOSUN.equals(sourceName)) return crawlChosunContent(doc, url);
+
             String selector = CONTENT_SELECTORS.get(sourceName);
             Element body = selector != null ? doc.selectFirst(selector) : null;
             if (body == null && selector != null) {
@@ -221,6 +256,42 @@ public class RssFetchService {
             return text.isEmpty() ? null : text;
         } catch (Exception e) {
             log.warn("[본문 크롤링] 실패 url={}: {}", url, e.getMessage());
+            return null;
+        }
+    }
+
+    // 조선일보는 본문을 <p>로 렌더링하지 않고 Fusion(Arc Publishing) 메타데이터 JSON에 담아 내려준다.
+    // RSS의 content:encoded는 첫 문단만 주므로, 본문 전체를 얻으려면 이 JSON을 직접 읽어야 한다.
+    private String crawlChosunContent(Document doc, String url) {
+        Element script = doc.selectFirst("script#fusion-metadata");
+        if (script == null) {
+            log.warn("[본문 크롤링] 조선일보 fusion-metadata 없음 url={}", url);
+            return null;
+        }
+        String js = script.data();
+        int start = js.indexOf(FUSION_CONTENT_START);
+        int end = start < 0 ? -1 : js.indexOf(FUSION_CONTENT_END, start);
+        if (start < 0 || end < 0) {
+            log.warn("[본문 크롤링] 조선일보 globalContent 구간 미발견 url={}", url);
+            return null;
+        }
+
+        try {
+            JsonNode elements = objectMapper
+                    .readTree(js.substring(start + FUSION_CONTENT_START.length(), end + 1))
+                    .path("content_elements");
+            StringBuilder body = new StringBuilder();
+            for (JsonNode element : elements) {
+                if (!"text".equals(element.path("type").asString())) continue;
+                String text = HtmlUtils.htmlUnescape(
+                        element.path("content").asString().replaceAll("<[^>]*>", "")).trim();
+                if (text.isEmpty()) continue;
+                if (!body.isEmpty()) body.append("\n\n");
+                body.append(text);
+            }
+            return body.isEmpty() ? null : body.toString();
+        } catch (Exception e) {
+            log.warn("[본문 크롤링] 조선일보 Fusion 파싱 실패 url={}: {}", url, e.getMessage());
             return null;
         }
     }

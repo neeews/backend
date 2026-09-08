@@ -26,6 +26,12 @@ public class RssController {
         return ResponseEntity.ok(Map.of("saved", rssFetchService.fetchSource(newsSource)));
     }
 
+    @PostMapping("/recrawl/{source}")
+    public ResponseEntity<Map<String, Integer>> recrawl(@PathVariable String source) {
+        NewsSource newsSource = NewsSource.valueOf(source.toUpperCase());
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.recrawlMissingContent(newsSource)));
+    }
+
     @PostMapping("/normalize-categories")
     public ResponseEntity<Map<String, Integer>> normalizeCategories() {
         return ResponseEntity.ok(Map.of("updated", rssFetchService.normalizeCategories()));

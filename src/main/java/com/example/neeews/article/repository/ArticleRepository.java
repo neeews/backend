@@ -174,4 +174,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findUnclassified(@Param("from") LocalDateTime from, Pageable pageable);
 
     long countByAiCategoryAtIsNullAndPublishedAtAfter(LocalDateTime from);
+
+    List<Article> findBySourceAndContentCrawledFalseAndPublishedAtAfterOrderByPublishedAtDesc(
+            NewsSource source, LocalDateTime after, Pageable pageable);
 }
