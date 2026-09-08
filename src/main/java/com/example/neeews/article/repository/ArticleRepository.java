@@ -169,12 +169,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     long countByAiImportanceIsNullAndPublishedAtAfter(LocalDateTime from);
 
-    @Query("SELECT a FROM Article a WHERE a.aiCategoryAt IS NULL AND a.publishedAt >= :from " +
-           "ORDER BY a.publishedAt DESC")
-    List<Article> findUnclassified(@Param("from") LocalDateTime from, Pageable pageable);
-
-    long countByAiCategoryAtIsNullAndPublishedAtAfter(LocalDateTime from);
-
     List<Article> findBySourceAndContentCrawledFalseAndPublishedAtAfterOrderByPublishedAtDesc(
             NewsSource source, LocalDateTime after, Pageable pageable);
 }
