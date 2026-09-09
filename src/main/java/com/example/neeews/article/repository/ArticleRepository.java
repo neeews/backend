@@ -169,6 +169,13 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     long countByAiImportanceIsNullAndPublishedAtAfter(LocalDateTime from);
 
-    List<Article> findBySourceAndContentCrawledFalseAndPublishedAtAfterOrderByPublishedAtDesc(
-            NewsSource source, LocalDateTime after, Pageable pageable);
+    // 본문 확보에 실패한 기사는 상세 조회가 재시도 방지로 contentCrawled를 세워두기도 한다.
+    // 크롤러를 고친 뒤 그 기사까지 다시 긁으려면 플래그만 볼 게 아니라 본문 길이도 함께 봐야 한다.
+    @Query("SELECT a FROM Article a WHERE a.source = :source AND a.publishedAt >= :after " +
+           "AND (a.contentCrawled = false OR LENGTH(a.description) < :minLength) " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> findMissingContent(@Param("source") NewsSource source,
+                                     @Param("after") LocalDateTime after,
+                                     @Param("minLength") int minLength,
+                                     Pageable pageable);
 }

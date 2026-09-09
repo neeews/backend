@@ -70,6 +70,8 @@ public class RssFetchService {
     // 한 번에 다 돌면 요청이 몇 분씩 걸려, 나눠 호출하도록 건수를 끊는다.
     private static final int RECRAWL_WINDOW_DAYS = 7;
     private static final int RECRAWL_MAX_PER_RUN = 200;
+    // 크롤링에 성공한 기사는 평균 1,018자, RSS 요약만 있는 기사는 359자다. 그 사이에 선을 긋는다.
+    private static final int RECRAWL_MIN_BODY_LENGTH = 500;
 
     private static final String CHOSUN = "조선일보";
     private static final String FUSION_CONTENT_START = "Fusion.globalContent=";
@@ -135,10 +137,9 @@ public class RssFetchService {
 
     // 건별로 커밋한다 — 수백 건을 한 트랜잭션으로 묶으면 크롤링이 끝날 때까지 커넥션을 잡고 있게 된다.
     public int recrawlMissingContent(NewsSource source) {
-        List<Article> targets = articleRepository
-                .findBySourceAndContentCrawledFalseAndPublishedAtAfterOrderByPublishedAtDesc(
-                        source, LocalDateTime.now().minusDays(RECRAWL_WINDOW_DAYS),
-                        PageRequest.of(0, RECRAWL_MAX_PER_RUN));
+        List<Article> targets = articleRepository.findMissingContent(
+                source, LocalDateTime.now().minusDays(RECRAWL_WINDOW_DAYS),
+                RECRAWL_MIN_BODY_LENGTH, PageRequest.of(0, RECRAWL_MAX_PER_RUN));
 
         int updated = 0;
         for (Article article : targets) {
