@@ -15,7 +15,9 @@ public class ArticleSummaryScheduler {
 
     private final ArticleSummaryService articleSummaryService;
 
-    @Scheduled(cron = "0 10 0,12 * * *")
+    // 오늘의 뉴스는 하루가 지나면서 채워지는 목록이라 매시간 돌린다.
+    // 하루 두 번 5건씩으로는 그날 중요 기사가 요약되기 전에 목록이 비어 보인다.
+    @Scheduled(cron = "0 10 * * * *")
     public void summarize() {
         try {
             articleSummaryService.summarizeBatch();

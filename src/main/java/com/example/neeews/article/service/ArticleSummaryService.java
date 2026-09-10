@@ -2,21 +2,16 @@ package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
-import com.example.neeews.rss.domain.NewsSource;
 import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -24,15 +19,16 @@ import java.util.Optional;
 public class ArticleSummaryService {
 
     private static final String PROMPT = """
-            다음 뉴스 기사를 한국어 3문장으로 요약해라. \
-            군더더기 없이 핵심 사실만 담고, 요약문 외에 다른 말은 붙이지 마라.
+            다음 뉴스 기사를 한국어 한두 문장으로 요약해라. \
+            무슨 일이 있었는지만 담고, 요약문 외에 다른 말은 붙이지 마라.
 
             기사:
             """;
 
     // 요약할 만한 최소 분량. RSS description만 있는 기사는 평균 79자라 이 아래는 요약해도 원문보다 길어진다.
     private static final int MIN_BODY_LENGTH = 300;
-    private static final int CANDIDATE_WINDOW_HOURS = 12;
+    // 오늘의 뉴스가 자정 직후 비지 않도록 어제 기사까지 요약해 둔다 (getDailySummaries의 어제 보충과 같은 창).
+    private static final int CANDIDATE_WINDOW_HOURS = 24;
 
     private final ArticleRepository articleRepository;
     private final RssFetchService rssFetchService;
@@ -68,34 +64,11 @@ public class ArticleSummaryService {
         log.info("[요약] {}건 중 {}건 완료", candidates.size(), done);
     }
 
-    // 카테고리마다 최신 미요약 기사를 1건씩 뽑되, 마지막으로 요약된 지 오래된 카테고리를 우선한다.
-    // 카테고리(7개)가 배치 크기(5건)보다 많아 매 실행 같은 카테고리만 뽑히는 것을 막는다.
+    // 오늘의 뉴스에 올라갈 기사만 요약한다. 카테고리 골고루 대신 중요도 점수 높은 순으로 뽑는 이유는,
+    // 화면이 "오늘 있었던 중요한 일"만 담는 곳이라 카테고리가 비어도 상관없기 때문이다.
     private List<Article> pickCandidates() {
         LocalDateTime since = LocalDateTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
-        Map<String, LocalDateTime> lastSummarized = lastSummarizedAtByCategory();
-
-        List<String> categories = new ArrayList<>(NewsSource.activeCategories());
-        categories.sort(Comparator.comparing(
-                c -> lastSummarized.getOrDefault(c, LocalDateTime.MIN)));
-
-        List<Article> picked = new ArrayList<>();
-        for (String category : categories) {
-            if (picked.size() >= batchSize) break;
-            Optional<Article> candidate = articleRepository
-                    .findTop1ByCategoryAndAiSummaryIsNullAndPublishedAtAfterOrderByPublishedAtDesc(category, since);
-            candidate.ifPresent(picked::add);
-        }
-        return picked;
-    }
-
-    private Map<String, LocalDateTime> lastSummarizedAtByCategory() {
-        Map<String, LocalDateTime> map = new HashMap<>();
-        for (Object[] row : articleRepository.findLastSummarizedAtByCategory()) {
-            if (row[0] != null && row[1] != null) {
-                map.put((String) row[0], (LocalDateTime) row[1]);
-            }
-        }
-        return map;
+        return articleRepository.findUnsummarizedImportant(since, PageRequest.of(0, batchSize));
     }
 
     private String resolveBody(Article article) {

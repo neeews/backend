@@ -60,6 +60,9 @@ public class ArticleService {
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
     private static final int HOT_ARTICLE_COUNT = 6;
+    private static final int TODAY_ARTICLE_COUNT = 8;
+    // 같은 사건이 걸러지는 만큼 넉넉히 뽑아 온다.
+    private static final int TODAY_CANDIDATE_LIMIT = TODAY_ARTICLE_COUNT * 3;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
     private final ArticleRepository articleRepository;
@@ -110,29 +113,38 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<DailySummaryResponse> getDailySummaries() {
-        return articleRepository.findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc()
-                .stream()
-                .map(DailySummaryResponse::from)
-                .toList();
+        LocalDateTime todayFrom = LocalDate.now().atStartOfDay();
+        Pageable limit = PageRequest.of(0, TODAY_CANDIDATE_LIMIT);
+
+        List<Article> articles = new ArrayList<>();
+        fill(articles, TODAY_ARTICLE_COUNT,
+                () -> articleRepository.findSummarizedImportantSince(todayFrom, limit));
+        // 자정 직후에는 오늘 발행·요약된 기사가 몇 건 없어 화면이 비어 보인다. 남은 칸은 어제 기사로 메운다.
+        fill(articles, TODAY_ARTICLE_COUNT,
+                () -> articleRepository.findSummarizedImportantSince(todayFrom.minusDays(1), limit));
+
+        return articles.stream().map(DailySummaryResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
         LocalDateTime fallbackFrom = LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS);
         List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
-        fill(articles, () -> articleRepository.findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
-                Importance.HIGH, fallbackFrom));
+        fill(articles, HOT_ARTICLE_COUNT,
+                () -> articleRepository.findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
+                        Importance.HIGH, fallbackFrom));
         // muni 장애로 판정이 밀리면 HIGH만으로는 못 채운다. LOW로 확정된 기사를 올리느니 아직 판정 전인 최신 기사로 남은 칸을 메운다.
-        fill(articles, () -> articleRepository.findTop6ByAiImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
-                fallbackFrom));
+        fill(articles, HOT_ARTICLE_COUNT,
+                () -> articleRepository.findTop6ByAiImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
+                        fallbackFrom));
         return toResponses(articles, email);
     }
 
-    private void fill(List<Article> target, Supplier<List<Article>> source) {
-        if (target.size() >= HOT_ARTICLE_COUNT) return;
+    private void fill(List<Article> target, int limit, Supplier<List<Article>> source) {
+        if (target.size() >= limit) return;
         Set<Long> ids = target.stream().map(Article::getId).collect(Collectors.toSet());
         for (Article article : source.get()) {
-            if (target.size() >= HOT_ARTICLE_COUNT) break;
+            if (target.size() >= limit) break;
             if (ids.contains(article.getId()) || isSameEventAsAny(article, target)) continue;
             ids.add(article.getId());
             target.add(article);

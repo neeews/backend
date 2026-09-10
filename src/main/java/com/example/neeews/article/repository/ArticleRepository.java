@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 public interface ArticleRepository extends JpaRepository<Article, Long> {
 
@@ -101,13 +100,19 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("SELECT a.category, COUNT(a) FROM Article a GROUP BY a.category ORDER BY COUNT(a) DESC")
     List<Object[]> findCategoryStats();
 
-    Optional<Article> findTop1ByCategoryAndAiSummaryIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
-            String category, LocalDateTime after);
+    // 오늘의 뉴스는 요약문 자체가 본문이라 요약이 달린 기사만 후보다.
+    // 중요도까지 보는 이유는 핫이슈와 같다 — HIGH가 아니면 "오늘 있었던 일"이라 부를 만한 사건이 아니다.
+    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :from " +
+           "AND a.aiSummary IS NOT NULL " +
+           "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
+    List<Article> findSummarizedImportantSince(@Param("from") LocalDateTime from, Pageable pageable);
 
-    @Query("SELECT a.category, MAX(a.aiSummarizedAt) FROM Article a WHERE a.aiSummary IS NOT NULL GROUP BY a.category")
-    List<Object[]> findLastSummarizedAtByCategory();
-
-    List<Article> findTop5ByAiSummaryIsNotNullOrderByAiSummarizedAtDesc();
+    @Query("SELECT a FROM Article a WHERE a.publishedAt >= :from " +
+           "AND a.aiSummary IS NULL " +
+           "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
+    List<Article> findUnsummarizedImportant(@Param("from") LocalDateTime from, Pageable pageable);
 
     // 아직 아무도 라벨을 안 매긴 기사 — AI 자동 라벨링 대상 조회용
     @Query("SELECT a FROM Article a WHERE NOT EXISTS " +
