@@ -53,6 +53,17 @@ public class ArticleService {
     // 오늘 노출된 제목 80건을 쌍으로 재보니 0.45 이상은 전부 같은 사건이었고, 그 아래로는
     // "잠수사 숨져" / "묘지 작업 중 숨져"처럼 표현만 닮은 다른 사건이 섞이기 시작했다.
     private static final double SAME_EVENT_TITLE_OVERLAP = 0.45;
+
+    // 제목만 보면 매체가 같은 사건을 전혀 다른 표현으로 뽑았을 때 놓친다
+    // ("법원 '권혁빈 이혼, 2조5500억 재산분할'" / "스마일게이트 권혁빈 이혼 인용...주식 35% 지급" = 제목 0.36).
+    // 그래서 본문 겹침을 보조 조건으로 얹는다. 3일치 HIGH 기사 4,468건으로 재보니
+    // 본문 0.50 이상은 6쌍 모두 같은 사건이었고, 0.40~0.50 구간은 "여수 거름 중장비 끼임" /
+    // "묘지 석축 작업"(0.454)처럼 사고 기사끼리 어휘만 닮은 다른 사건이 섞여 쓸 수 없다.
+    private static final double SAME_EVENT_BODY_OVERLAP = 0.50;
+
+    // 본문 전체를 비교하면 정치 공방 기사끼리 같은 배경 설명을 공유해 다른 사건도 0.43까지 올라간다.
+    // 사건을 특정하는 정보는 리드 문단에 모여 있어 앞부분만 본다 (위 수치도 이 길이로 측정했다).
+    private static final int BODY_PREFIX_LENGTH = 400;
     private static final int HEADLINE_CANDIDATE_LIMIT = HEADLINES_PER_CATEGORY * 4;
     private static final Pattern BRACKET_TAG = Pattern.compile("\\[[^\\]]*\\]");
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^0-9A-Za-z가-힣]");
@@ -161,9 +172,17 @@ public class ArticleService {
     }
 
     private static boolean isSameEventAsAny(Article candidate, List<Article> picked) {
-        Set<String> bigrams = titleBigrams(candidate.getTitle());
-        return picked.stream()
-                .anyMatch(p -> overlapRatio(bigrams, titleBigrams(p.getTitle())) >= SAME_EVENT_TITLE_OVERLAP);
+        Set<String> title = charBigrams(candidate.getTitle());
+        Set<String> body = bodyBigrams(candidate);
+        return picked.stream().anyMatch(p ->
+                overlapRatio(title, charBigrams(p.getTitle())) >= SAME_EVENT_TITLE_OVERLAP
+                        || overlapRatio(body, bodyBigrams(p)) >= SAME_EVENT_BODY_OVERLAP);
+    }
+
+    private static Set<String> bodyBigrams(Article article) {
+        String body = article.getDescription();
+        if (body == null) return Set.of();
+        return charBigrams(body.length() > BODY_PREFIX_LENGTH ? body.substring(0, BODY_PREFIX_LENGTH) : body);
     }
 
     // 자카드 대신 짧은 쪽 기준 겹침 비율을 쓴다. 같은 사건이라도 매체마다 제목 길이가 두 배씩
@@ -174,9 +193,9 @@ public class ArticleService {
         return (double) common / Math.min(a.size(), b.size());
     }
 
-    private static Set<String> titleBigrams(String title) {
-        if (title == null) return Set.of();
-        String cleaned = BRACKET_TAG.matcher(HtmlUtils.htmlUnescape(title)).replaceAll("");
+    private static Set<String> charBigrams(String text) {
+        if (text == null) return Set.of();
+        String cleaned = BRACKET_TAG.matcher(HtmlUtils.htmlUnescape(text)).replaceAll("");
         String normalized = NON_ALPHANUMERIC.matcher(cleaned).replaceAll("").toLowerCase();
         if (normalized.length() < 2) return normalized.isEmpty() ? Set.of() : Set.of(normalized);
         Set<String> bigrams = new HashSet<>();
