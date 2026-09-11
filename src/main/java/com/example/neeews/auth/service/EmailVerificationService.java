@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class EmailVerificationService {
 
     private static final String SENDER_DISPLAY_NAME = "neeews";
+    private static final int EXPIRED_RETENTION_DAYS = 1;
 
     private final EmailVerificationRepository emailVerificationRepository;
     private final JavaMailSender mailSender;
@@ -65,6 +66,16 @@ public class EmailVerificationService {
     @Transactional
     public void consumeVerification(String email) {
         emailVerificationRepository.deleteByEmail(email);
+    }
+
+    // consumeVerification은 가입·비밀번호 재설정이 성공했을 때만 불린다. 인증만 받고 이탈하면
+    // 행이 그대로 남아 이메일이 영구 보관되므로, 만료된 건을 주기적으로 지운다.
+    // 만료 직후 바로 지우면 재방문한 사용자에게 "만료되었습니다" 대신 "코드를 먼저 요청해주세요"가
+    // 떠서 혼란스러우므로 하루 지난 것만 정리한다.
+    @Transactional
+    public long deleteExpired() {
+        return emailVerificationRepository.deleteByExpiresAtBefore(
+                LocalDateTime.now().minusDays(EXPIRED_RETENTION_DAYS));
     }
 
     private void sendCode(String email, String subject) {
