@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface SuggestionRepository extends JpaRepository<Suggestion, Long> {
     List<Suggestion> findAllByOrderByCreatedAtDesc();
+
+    void deleteAllByUserEmail(String userEmail);
 }

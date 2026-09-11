@@ -41,6 +41,12 @@ public class SuggestionService {
         return SuggestionResponse.from(suggestion);
     }
 
+    // 탈퇴 시 호출된다. userEmail이 개인정보라 계정과 함께 파기해야 한다.
+    @Transactional
+    public void deleteAllByUser(String userEmail) {
+        suggestionRepository.deleteAllByUserEmail(userEmail);
+    }
+
     @Transactional
     public void delete(Long id) {
         if (!suggestionRepository.existsById(id)) {

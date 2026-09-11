@@ -8,6 +8,7 @@ import com.example.neeews.auth.repository.RefreshTokenRepository;
 import com.example.neeews.auth.repository.UserRepository;
 import com.example.neeews.bookmark.repository.BookmarkRepository;
 import com.example.neeews.search.repository.SearchHistoryRepository;
+import com.example.neeews.suggestion.service.SuggestionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class UserService {
     private final BookmarkRepository bookmarkRepository;
     private final SearchHistoryRepository searchHistoryRepository;
     private final ArticleReadService articleReadService;
+    private final SuggestionService suggestionService;
 
     @Transactional(readOnly = true)
     public UserResponse getProfile(String email) {
@@ -43,6 +45,7 @@ public class UserService {
     public void deleteAccount(String email) {
         User user = getUser(email);
         articleReadService.clearHistoryForUser(email);
+        suggestionService.deleteAllByUser(email);
         bookmarkRepository.deleteAllByUser(user);
         refreshTokenRepository.deleteByUser(user);
         searchHistoryRepository.deleteAllByUser(user);
