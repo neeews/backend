@@ -71,9 +71,9 @@ public class ArticleService {
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
     private static final int HOT_ARTICLE_COUNT = 6;
-    private static final int TODAY_ARTICLE_COUNT = 8;
-    // 같은 사건이 걸러지는 만큼 넉넉히 뽑아 온다.
-    private static final int TODAY_CANDIDATE_LIMIT = TODAY_ARTICLE_COUNT * 3;
+    // 오늘의 뉴스는 건수를 정해 두지 않는다. min-score를 넘겨 요약된 기사는 그날 몇 건이든 다 내보낸다.
+    // 다만 자정 직후처럼 오늘 치가 거의 없을 땐 화면이 비어 보여, 이 아래면 어제 치까지 이어 붙인다.
+    private static final int TODAY_MIN_COUNT = 5;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
     private final ArticleRepository articleRepository;
@@ -88,6 +88,9 @@ public class ArticleService {
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    @Value("${app.summary.min-score}")
+    private double summaryMinScore;
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getBreakingArticles(String email) {
@@ -125,16 +128,25 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public List<DailySummaryResponse> getDailySummaries() {
         LocalDateTime todayFrom = LocalDate.now().atStartOfDay();
-        Pageable limit = PageRequest.of(0, TODAY_CANDIDATE_LIMIT);
 
-        List<Article> articles = new ArrayList<>();
-        fill(articles, TODAY_ARTICLE_COUNT,
-                () -> articleRepository.findSummarizedImportantSince(todayFrom, limit));
-        // 자정 직후에는 오늘 발행·요약된 기사가 몇 건 없어 화면이 비어 보인다. 남은 칸은 어제 기사로 메운다.
-        fill(articles, TODAY_ARTICLE_COUNT,
-                () -> articleRepository.findSummarizedImportantSince(todayFrom.minusDays(1), limit));
+        List<Article> articles = collectDistinct(
+                articleRepository.findSummarizedImportantSince(todayFrom, summaryMinScore));
+        if (articles.size() < TODAY_MIN_COUNT) {
+            articles = collectDistinct(
+                    articleRepository.findSummarizedImportantSince(todayFrom.minusDays(1), summaryMinScore));
+        }
 
         return articles.stream().map(DailySummaryResponse::from).toList();
+    }
+
+    // 같은 사건을 여러 매체가 쓴 요약문이 나란히 붙으면 같은 글을 반복해 읽게 된다.
+    // 점수 높은 순으로 들어오므로 앞선 기사를 남기고 뒤따르는 중복만 버린다.
+    private static List<Article> collectDistinct(List<Article> candidates) {
+        List<Article> picked = new ArrayList<>();
+        for (Article candidate : candidates) {
+            if (!isSameEventAsAny(candidate, picked)) picked.add(candidate);
+        }
+        return picked;
     }
 
     @Transactional(readOnly = true)

@@ -101,18 +101,22 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Object[]> findCategoryStats();
 
     // 오늘의 뉴스는 요약문 자체가 본문이라 요약이 달린 기사만 후보다.
-    // 중요도까지 보는 이유는 핫이슈와 같다 — HIGH가 아니면 "오늘 있었던 일"이라 부를 만한 사건이 아니다.
+    // HIGH 컷(0.5)은 하루 1,500건이 넘어 요약 배치가 따라잡지 못한다. 그래서 노출 기준은
+    // HIGH 여부가 아니라 app.summary.min-score로 따로 잡은 더 높은 점수 컷을 쓴다.
     @Query("SELECT a FROM Article a WHERE a.publishedAt >= :from " +
            "AND a.aiSummary IS NOT NULL " +
-           "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "AND a.aiImportanceScore >= :minScore " +
            "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
-    List<Article> findSummarizedImportantSince(@Param("from") LocalDateTime from, Pageable pageable);
+    List<Article> findSummarizedImportantSince(@Param("from") LocalDateTime from,
+                                               @Param("minScore") double minScore);
 
     @Query("SELECT a FROM Article a WHERE a.publishedAt >= :from " +
            "AND a.aiSummary IS NULL " +
-           "AND a.aiImportance = com.example.neeews.article.domain.Importance.HIGH " +
+           "AND a.aiImportanceScore >= :minScore " +
            "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
-    List<Article> findUnsummarizedImportant(@Param("from") LocalDateTime from, Pageable pageable);
+    List<Article> findUnsummarizedImportant(@Param("from") LocalDateTime from,
+                                            @Param("minScore") double minScore,
+                                            Pageable pageable);
 
     // 아직 아무도 라벨을 안 매긴 기사 — AI 자동 라벨링 대상 조회용
     @Query("SELECT a FROM Article a WHERE NOT EXISTS " +

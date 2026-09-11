@@ -40,6 +40,9 @@ public class ArticleSummaryService {
     @Value("${app.summary.max-input-length}")
     private int maxInputLength;
 
+    @Value("${app.summary.min-score}")
+    private double minScore;
+
     public void summarizeBatch() {
         List<Article> candidates = pickCandidates();
         if (candidates.isEmpty()) {
@@ -66,9 +69,10 @@ public class ArticleSummaryService {
 
     // 오늘의 뉴스에 올라갈 기사만 요약한다. 카테고리 골고루 대신 중요도 점수 높은 순으로 뽑는 이유는,
     // 화면이 "오늘 있었던 중요한 일"만 담는 곳이라 카테고리가 비어도 상관없기 때문이다.
+    // 노출 쿼리와 같은 min-score를 써야, 요약해 놓고 목록에 안 뜨는 기사가 생기지 않는다.
     private List<Article> pickCandidates() {
         LocalDateTime since = LocalDateTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
-        return articleRepository.findUnsummarizedImportant(since, PageRequest.of(0, batchSize));
+        return articleRepository.findUnsummarizedImportant(since, minScore, PageRequest.of(0, batchSize));
     }
 
     private String resolveBody(Article article) {
