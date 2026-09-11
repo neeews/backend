@@ -110,12 +110,17 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findSummarizedImportantSince(@Param("from") LocalDateTime from,
                                                @Param("minScore") double minScore);
 
+    // 본문이 짧은 기사를 걸러내지 않으면 배치가 멈춘다. 요약에 실패한 기사는 aiSummary가 NULL로 남고,
+    // 점수가 최상위면 다음 시간에도 정렬 맨 앞에 다시 뽑혀 자리를 영구 점거한다(실제로 7건이 8칸 중 7칸을 막고 있었다).
+    // 중요도 판정이 이미 원문 크롤링을 시도해 본문을 저장하므로, 그러고도 짧으면 크롤링해도 안 나오는 기사다.
     @Query("SELECT a FROM Article a WHERE a.publishedAt >= :from " +
            "AND a.aiSummary IS NULL " +
            "AND a.aiImportanceScore >= :minScore " +
+           "AND LENGTH(a.description) >= :minBodyLength " +
            "ORDER BY a.aiImportanceScore DESC, a.publishedAt DESC")
     List<Article> findUnsummarizedImportant(@Param("from") LocalDateTime from,
                                             @Param("minScore") double minScore,
+                                            @Param("minBodyLength") int minBodyLength,
                                             Pageable pageable);
 
     // 아직 아무도 라벨을 안 매긴 기사 — AI 자동 라벨링 대상 조회용

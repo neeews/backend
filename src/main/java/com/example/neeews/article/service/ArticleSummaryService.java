@@ -72,7 +72,8 @@ public class ArticleSummaryService {
     // 노출 쿼리와 같은 min-score를 써야, 요약해 놓고 목록에 안 뜨는 기사가 생기지 않는다.
     private List<Article> pickCandidates() {
         LocalDateTime since = LocalDateTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
-        return articleRepository.findUnsummarizedImportant(since, minScore, PageRequest.of(0, batchSize));
+        return articleRepository.findUnsummarizedImportant(
+                since, minScore, MIN_BODY_LENGTH, PageRequest.of(0, batchSize));
     }
 
     private String resolveBody(Article article) {
