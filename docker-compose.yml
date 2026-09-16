@@ -37,6 +37,8 @@ services:
       retries: 3
       # 부팅에 10초 남짓 걸린다. 이 시간 동안의 실패는 재시도 횟수에 넣지 않는다.
       start_period: 60s
+      # curl이 베이스 이미지에 없으면 unhealthy로만 표시되고 서비스는 계속 돈다.
+      # 서버가 외부 apt 저장소에 닿지 못해 설치로 해결할 수 없어, 우선 있는 그대로 쓴다.
     environment:
       DB_URL: jdbc:mysql://localhost:3306/${DB_NAME}?serverTimezone=UTC
       DB_NAME: ${DB_NAME}
