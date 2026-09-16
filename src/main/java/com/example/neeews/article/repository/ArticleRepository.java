@@ -183,6 +183,35 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     long countByAiImportanceIsNullAndPublishedAtAfter(LocalDateTime from);
 
+    long countByFetchedAtAfter(LocalDateTime from);
+
+    long countByAiSummarizedAtAfter(LocalDateTime from);
+
+    @Query("SELECT MAX(a.fetchedAt) FROM Article a")
+    LocalDateTime findLastFetchedAt();
+
+    @Query("SELECT MAX(a.aiImportanceAt) FROM Article a")
+    LocalDateTime findLastImportanceJudgedAt();
+
+    @Query("SELECT MAX(a.aiSummarizedAt) FROM Article a")
+    LocalDateTime findLastSummarizedAt();
+
+    // 요약 배치가 실제로 집어갈 수 있는 밀린 건수. 조건을 findUnsummarizedImportant와 맞춰야
+    // "밀렸다"는 수치가 배치의 실제 대상과 어긋나지 않는다.
+    @Query("SELECT COUNT(a) FROM Article a WHERE a.publishedAt >= :from " +
+           "AND a.aiSummary IS NULL " +
+           "AND a.aiImportanceScore >= :minScore " +
+           "AND LENGTH(a.description) >= :minBodyLength")
+    long countSummaryBacklog(@Param("from") LocalDateTime from,
+                             @Param("minScore") double minScore,
+                             @Param("minBodyLength") int minBodyLength);
+
+    @Query("SELECT COUNT(a) FROM Article a WHERE a.publishedAt >= :from " +
+           "AND a.aiSummary IS NOT NULL " +
+           "AND a.aiImportanceScore >= :minScore")
+    long countSummarizedImportantSince(@Param("from") LocalDateTime from,
+                                       @Param("minScore") double minScore);
+
     // 본문 확보에 실패한 기사는 상세 조회가 재시도 방지로 contentCrawled를 세워두기도 한다.
     // 크롤러를 고친 뒤 그 기사까지 다시 긁으려면 플래그만 볼 게 아니라 본문 길이도 함께 봐야 한다.
     @Query("SELECT a FROM Article a WHERE a.source = :source AND a.publishedAt >= :after " +

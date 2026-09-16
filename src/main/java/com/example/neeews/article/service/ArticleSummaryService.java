@@ -26,7 +26,8 @@ public class ArticleSummaryService {
             """;
 
     // 요약할 만한 최소 분량. RSS description만 있는 기사는 평균 79자라 이 아래는 요약해도 원문보다 길어진다.
-    private static final int MIN_BODY_LENGTH = 300;
+    // 헬스체크가 "밀린 건수"를 셀 때 같은 기준을 써야 해서 공개한다.
+    public static final int MIN_BODY_LENGTH = 300;
     // 오늘의 뉴스가 자정 직후 비지 않도록 어제 기사까지 요약해 둔다 (getDailySummaries의 어제 보충과 같은 창).
     private static final int CANDIDATE_WINDOW_HOURS = 24;
 
