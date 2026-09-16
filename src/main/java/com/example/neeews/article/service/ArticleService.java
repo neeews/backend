@@ -61,6 +61,12 @@ public class ArticleService {
     // "묘지 석축 작업"(0.454)처럼 사고 기사끼리 어휘만 닮은 다른 사건이 섞여 쓸 수 없다.
     private static final double SAME_EVENT_BODY_OVERLAP = 0.50;
 
+    // 요약문은 사건의 핵심만 남아 매체가 달라도 표현이 비슷해진다. 제목만으로는 아슬하게 놓치던
+    // 쌍이 요약문에서는 뚜렷하게 갈린다 — "연락사무소 447억 배상" 두 건이 제목 0.41/요약 0.67,
+    // "윤석열 위증 2심" 두 건이 제목 0.44/요약 0.57이었다. 반대로 김승원 청문회를 둘러싼 서로 다른
+    // 사건들은 0.15~0.26에 머물러, 0.50이면 둘을 가르는 경계로 충분하다.
+    private static final double SAME_EVENT_SUMMARY_OVERLAP = 0.50;
+
     // 본문 전체를 비교하면 정치 공방 기사끼리 같은 배경 설명을 공유해 다른 사건도 0.43까지 올라간다.
     // 사건을 특정하는 정보는 리드 문단에 모여 있어 앞부분만 본다 (위 수치도 이 길이로 측정했다).
     private static final int BODY_PREFIX_LENGTH = 400;
@@ -71,9 +77,13 @@ public class ArticleService {
     private static final int HOT_TOPIC_WINDOW_HOURS = 48;
     private static final int HOT_FALLBACK_WINDOW_HOURS = 72;
     private static final int HOT_ARTICLE_COUNT = 6;
-    // 오늘의 뉴스는 건수를 정해 두지 않는다. min-score를 넘겨 요약된 기사는 그날 몇 건이든 다 내보낸다.
+    // 오늘의 뉴스는 건수를 정해 두지 않는다. 기준을 넘긴 사건은 그날 몇 건이든 다 내보낸다.
     // 다만 자정 직후처럼 오늘 치가 거의 없을 땐 화면이 비어 보여, 이 아래면 어제 치까지 이어 붙인다.
     private static final int TODAY_MIN_COUNT = 5;
+    // 한 매체만 쓴 일은 그날의 사건이라기보다 그 매체가 고른 기사에 가깝다.
+    private static final int MIN_SOURCES_PER_EVENT = 2;
+    // 건수를 고정하진 않지만, 큰 사건이 몰린 날 목록이 끝없이 길어지는 것만 막는다.
+    private static final int TODAY_MAX_EVENTS = 20;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
     private final ArticleRepository articleRepository;
@@ -129,24 +139,42 @@ public class ArticleService {
     public List<DailySummaryResponse> getDailySummaries() {
         LocalDateTime todayFrom = LocalDate.now().atStartOfDay();
 
-        List<Article> articles = collectDistinct(
-                articleRepository.findSummarizedImportantSince(todayFrom, summaryMinScore));
-        if (articles.size() < TODAY_MIN_COUNT) {
-            articles = collectDistinct(
-                    articleRepository.findSummarizedImportantSince(todayFrom.minusDays(1), summaryMinScore));
+        List<DailySummaryResponse> events = pickEventsSince(todayFrom);
+        if (events.size() < TODAY_MIN_COUNT) {
+            events = pickEventsSince(todayFrom.minusDays(1));
         }
-
-        return articles.stream().map(DailySummaryResponse::from).toList();
+        return events;
     }
 
-    // 같은 사건을 여러 매체가 쓴 요약문이 나란히 붙으면 같은 글을 반복해 읽게 된다.
-    // 점수 높은 순으로 들어오므로 앞선 기사를 남기고 뒤따르는 중복만 버린다.
-    private static List<Article> collectDistinct(List<Article> candidates) {
-        List<Article> picked = new ArrayList<>();
+    // 중요도 점수만으로는 "오늘 있었던 일"을 가릴 수 없다. muni는 뉴스 가치가 있는지를 볼 뿐이라
+    // 단발 사건사고도 높게 나온다. 여러 매체가 같은 일을 동시에 다뤘다는 사실이 그보다 나은 신호라,
+    // 같은 사건을 버리지 않고 묶어 보도한 매체 수를 센다. 조용한 날은 자연히 적게 나온다.
+    private List<DailySummaryResponse> pickEventsSince(LocalDateTime from) {
+        return clusterByEvent(articleRepository.findSummarizedImportantSince(from, summaryMinScore)).stream()
+                .filter(cluster -> sourceCount(cluster) >= MIN_SOURCES_PER_EVENT)
+                .sorted(Comparator.comparingLong(ArticleService::sourceCount).reversed())
+                .limit(TODAY_MAX_EVENTS)
+                .map(cluster -> DailySummaryResponse.from(cluster.get(0)))
+                .toList();
+    }
+
+    // 점수 높은 순으로 들어오므로 각 묶음의 첫 기사가 그 사건의 대표가 된다.
+    private static List<List<Article>> clusterByEvent(List<Article> candidates) {
+        List<List<Article>> clusters = new ArrayList<>();
         for (Article candidate : candidates) {
-            if (!isSameEventAsAny(candidate, picked)) picked.add(candidate);
+            clusters.stream()
+                    .filter(cluster -> isSameEventAsAny(candidate, cluster))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            cluster -> cluster.add(candidate),
+                            () -> clusters.add(new ArrayList<>(List.of(candidate))));
         }
-        return picked;
+        return clusters;
+    }
+
+    // 한 매체가 같은 사건을 여러 번 써도 한 곳으로 센다. 매체 수가 곧 중요도 신호이기 때문이다.
+    private static long sourceCount(List<Article> cluster) {
+        return cluster.stream().map(a -> a.getSource().getDisplayName()).distinct().count();
     }
 
     @Transactional(readOnly = true)
@@ -184,11 +212,18 @@ public class ArticleService {
     }
 
     private static boolean isSameEventAsAny(Article candidate, List<Article> picked) {
-        Set<String> title = charBigrams(candidate.getTitle());
-        Set<String> body = bodyBigrams(candidate);
-        return picked.stream().anyMatch(p ->
-                overlapRatio(title, charBigrams(p.getTitle())) >= SAME_EVENT_TITLE_OVERLAP
-                        || overlapRatio(body, bodyBigrams(p)) >= SAME_EVENT_BODY_OVERLAP);
+        return picked.stream().anyMatch(p -> isSameEvent(candidate, p));
+    }
+
+    private static boolean isSameEvent(Article a, Article b) {
+        return overlapRatio(charBigrams(a.getTitle()), charBigrams(b.getTitle())) >= SAME_EVENT_TITLE_OVERLAP
+                || overlapRatio(summaryBigrams(a), summaryBigrams(b)) >= SAME_EVENT_SUMMARY_OVERLAP
+                || overlapRatio(bodyBigrams(a), bodyBigrams(b)) >= SAME_EVENT_BODY_OVERLAP;
+    }
+
+    // 요약이 아직 안 달린 기사는 빈 집합이 되어 이 조건으로는 걸리지 않는다 (헤드라인이 그렇다).
+    private static Set<String> summaryBigrams(Article article) {
+        return charBigrams(article.getAiSummary());
     }
 
     private static Set<String> bodyBigrams(Article article) {
