@@ -45,6 +45,8 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/search").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/news/**").permitAll()
                         .requestMatchers("/rss/**").permitAll()
+                        // 비로그인 방문자도 세야 해서 인증 없이 받는다.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/visits/ping").permitAll()
                         // 도커·모니터링이 찌르는 경로라 인증 없이 연다. /actuator/** 전체를 열면
                         // 나중에 노출 엔드포인트가 늘었을 때 환경변수 같은 정보까지 같이 열린다.
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health").permitAll()
