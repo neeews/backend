@@ -58,7 +58,7 @@ public class AuthService {
 
     @Transactional
     public TokenResponse refresh(String refreshTokenStr) {
-        if (!jwtUtil.isTokenValid(refreshTokenStr)) {
+        if (!jwtUtil.isRefreshToken(refreshTokenStr)) {
             throw new IllegalArgumentException("유효하지 않은 리프레시 토큰입니다.");
         }
         RefreshToken stored = refreshTokenRepository.findByToken(refreshTokenStr)
