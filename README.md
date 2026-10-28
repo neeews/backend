@@ -92,6 +92,31 @@ docker-compose up -d
 |---|---|---|---|
 | GET | `/keywords/trending` | 오늘의 인기 키워드 | X |
 
+### AI 모델 `/models`
+
+Hugging Face에서 받아 옵니다. 양자화 사본(FP8·GGUF 등)은 제외합니다.
+
+각 모델에는 기반 모델(`baseModel`), 라이선스 이름·원문 링크(`license`, `licenseUrl`), 상업 이용 여부(`commercialUse`)가 붙습니다.
+`commercialUse`는 MIT·Apache-2.0 같은 잘 알려진 라이선스만 `ALLOWED`, CC BY-NC 계열은 `NON_COMMERCIAL`로 판정하고, 나머지(직접 만든 라이선스, Llama·Gemma 등 조건부 라이선스)는 `CHECK_REQUIRED`입니다.
+출시 목록은 모델 카드를 Ollama로 요약한 한국어 설명(`summary`)도 함께 내려줍니다. 트렌딩에는 없습니다.
+
+| 메서드 | 경로 | 설명 | 인증 필요 |
+|---|---|---|---|
+| GET | `/models/releases?page={n}` | 주요 AI 회사의 새 모델 출시 (좋아요 `app.huggingface.release-min-likes`개 이상) | X |
+| GET | `/models/trending` | 요즘 뜨는 모델 Top 10 | X |
+
+### 논문 `/papers`
+
+Hugging Face Daily Papers에서 받아 옵니다. HF가 전체 건수를 주지 않아 `total` 대신 다음 페이지 여부를 내려줍니다: `{ "papers": [...], "page": 1, "hasNext": true }`
+
+| 메서드 | 경로 | 설명 | 인증 필요 |
+|---|---|---|---|
+| GET | `/papers?page={n}` | 전체 논문, 최신순 20개씩 | X |
+| GET | `/papers/daily` | 최근 이틀 치 중 추천 수 Top 10 | X |
+| GET | `/papers/daily?date=2026-10-20&page={n}` | 그날 올라온 논문, 추천순 20개씩 | X |
+| GET | `/papers/weekly?week=2026-W43&page={n}` | 그 주(ISO 주차)의 논문, 추천순 20개씩 | X |
+| GET | `/papers/monthly?month=2026-09&page={n}` | 그 달의 논문, 추천순 20개씩 | X |
+
 ### 사용자 `/users`
 
 | 메서드 | 경로 | 설명 | 인증 필요 |
@@ -133,6 +158,7 @@ com.example.neeews
 ├── bookmark      # 북마크
 ├── config        # Security, DotEnv 설정
 ├── exception     # 전역 예외 처리
+├── huggingface   # AI 모델 출시·트렌딩, Daily Papers (Hugging Face API)
 ├── keyword       # 인기 키워드
 ├── rss           # RSS 수집 스케줄러
 ├── search        # 기사 검색
