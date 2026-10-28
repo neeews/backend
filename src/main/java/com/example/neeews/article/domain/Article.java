@@ -91,10 +91,6 @@ public class Article {
         this.fetchedAt = LocalDateTime.now();
     }
 
-    public void incrementViewCount() {
-        this.viewCount++;
-    }
-
     public void updateImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
@@ -107,10 +103,6 @@ public class Article {
     public void clearCachedImage() {
         this.imageUrl = null;
         this.cachedImagePath = null;
-    }
-
-    public void updateLastViewedAt(LocalDateTime lastViewedAt) {
-        this.lastViewedAt = lastViewedAt;
     }
 
     public void updateDescription(String description) {

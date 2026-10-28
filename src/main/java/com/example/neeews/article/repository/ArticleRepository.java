@@ -6,8 +6,10 @@ import com.example.neeews.rss.domain.NewsSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -133,6 +135,12 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                                     @Param("anyCategory") boolean anyCategory, @Param("categories") List<String> categories,
                                     @Param("anySource") boolean anySource, @Param("sources") List<NewsSource> sources,
                                     Pageable pageable);
+
+    // 엔티티로 viewCount++ 하면 동시 조회가 서로의 증가분을 덮어써 인기 기사일수록 조회수가 유실된다.
+    @Modifying
+    @Transactional
+    @Query("UPDATE Article a SET a.viewCount = a.viewCount + 1, a.lastViewedAt = :now WHERE a.id = :id")
+    void recordView(@Param("id") Long id, @Param("now") LocalDateTime now);
 
     @Query("SELECT a FROM Article a WHERE a.cachedImagePath IS NOT NULL AND a.lastViewedAt < :threshold")
     List<Article> findExpiredCachedImages(@Param("threshold") LocalDateTime threshold);

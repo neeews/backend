@@ -11,9 +11,7 @@ import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.bookmark.service.BookmarkService;
 import com.example.neeews.rss.domain.NewsSource;
-import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -22,11 +20,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.util.HtmlUtils;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,10 +33,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
@@ -102,13 +95,10 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
     private final ArticleReadService articleReadService;
-    private final RssFetchService rssFetchService;
-    private final ExternalImageFetcher externalImageFetcher;
     private final HotTopicService hotTopicService;
     private final HomeFeedCache homeFeedCache;
-
-    @Value("${app.image.storage-path}")
-    private String imageStoragePath;
+    private final ArticleCrawler articleCrawler;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -327,60 +317,38 @@ public class ArticleService {
         return articles.stream().map(a -> a.withRead(readIds.contains(a.getId()))).toList();
     }
 
-    @Transactional
+    // 크롤링은 외부 사이트를 기다리는 일이라 트랜잭션 밖에서 한다. 안에서 하면 그동안 DB 커넥션을 쥐고 있어
+    // 첫 조회가 몰릴 때 풀(기본 10개)이 말라 다른 API까지 멈춘다.
     public ArticleDetailResponse getArticleDetail(Long id, String email) {
+        ArticleCrawler.CrawlRequest crawlRequest = transactionTemplate.execute(status -> planCrawl(id));
+        ArticleCrawler.CrawlResult crawled = crawlRequest == null ? null : articleCrawler.crawl(crawlRequest);
+        ArticleDetailResponse response = transactionTemplate.execute(status -> buildDetail(id, email, crawlRequest, crawled));
+        articleRepository.recordView(id, LocalDateTime.now());
+        return response;
+    }
+
+    private ArticleCrawler.CrawlRequest planCrawl(Long id) {
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
-        article.incrementViewCount();
-        article.updateLastViewedAt(LocalDateTime.now());
-
         boolean needsImage = article.getCachedImagePath() == null;
-        boolean needsUrlFix = !needsImage && !"none".equals(article.getCachedImagePath())
-                && (article.getImageUrl() == null || !article.getImageUrl().contains("?w=800"));
         boolean needsContent = !article.isContentCrawled();
+        if (!needsImage && !needsContent) return null;
+        return new ArticleCrawler.CrawlRequest(article.getId(), article.getLink(), article.getSource().getDisplayName(),
+                article.getImageUrl(), needsImage, needsContent);
+    }
 
+    private ArticleDetailResponse buildDetail(Long id, String email, ArticleCrawler.CrawlRequest crawlRequest,
+                                              ArticleCrawler.CrawlResult crawled) {
+        Article article = articleRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
+
+        boolean needsUrlFix = article.getCachedImagePath() != null && !"none".equals(article.getCachedImagePath())
+                && (article.getImageUrl() == null || !article.getImageUrl().contains("?w=800"));
         if (needsUrlFix) {
             article.updateCachedImage(baseUrl + "/api/images/" + article.getCachedImagePath() + "?w=800", article.getCachedImagePath());
         }
-
-        if (needsImage || needsContent) {
-            String existingImageUrl = article.getImageUrl();
-            String articleLink = article.getLink();
-            String sourceName = article.getSource().getDisplayName();
-            Long articleId = article.getId();
-
-            AtomicReference<String[]> imageResult = new AtomicReference<>();
-            AtomicReference<String> contentResult = new AtomicReference<>();
-
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-            if (needsImage) {
-                futures.add(CompletableFuture.runAsync(() -> {
-                    String url = existingImageUrl != null
-                            ? existingImageUrl
-                            : rssFetchService.crawlImageUrl(articleLink);
-                    if (url == null) return;
-                    String filename = downloadAndSaveImage(url, articleId);
-                    if (filename != null) imageResult.set(new String[]{url, filename});
-                }));
-            }
-
-            if (needsContent) {
-                futures.add(CompletableFuture.runAsync(() -> {
-                    String content = rssFetchService.crawlArticleContent(articleLink, sourceName);
-                    if (content != null) contentResult.set(content);
-                }));
-            }
-
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-            String[] imgRes = imageResult.get();
-            if (imgRes != null) article.updateCachedImage(baseUrl + "/api/images/" + imgRes[1] + "?w=800", imgRes[1]);
-            else if (needsImage) article.updateCachedImage(null, "none"); // 이미지 없음으로 확정, 재시도 방지
-
-            String content = contentResult.get();
-            if (content != null) article.updateDescription(content);
-            else if (needsContent) article.markContentCrawled();
+        if (crawled != null) {
+            applyCrawlResult(article, crawlRequest, crawled);
         }
 
         articleReadService.markAsRead(id, email);
@@ -390,20 +358,18 @@ public class ArticleService {
         return ArticleDetailResponse.of(article, related, isBookmarked, email != null);
     }
 
-    private String downloadAndSaveImage(String url, Long articleId) {
-        ExternalImageFetcher.FetchedImage image = externalImageFetcher.fetch(url);
-        if (image == null) {
-            return null;
+    // 같은 기사를 먼저 연 다른 요청이 이미 반영했을 수 있어, 비어 있는 항목만 채운다.
+    private void applyCrawlResult(Article article, ArticleCrawler.CrawlRequest request, ArticleCrawler.CrawlResult crawled) {
+        if (request.needsImage() && article.getCachedImagePath() == null) {
+            if (crawled.imageFilename() != null) {
+                article.updateCachedImage(baseUrl + "/api/images/" + crawled.imageFilename() + "?w=800", crawled.imageFilename());
+            } else {
+                article.updateCachedImage(null, "none"); // 이미지 없음으로 확정, 재시도 방지
+            }
         }
-        try {
-            String filename = articleId + "." + image.ext();
-            Path path = Paths.get(imageStoragePath, filename);
-            Files.createDirectories(path.getParent());
-            Files.write(path, image.bytes());
-            return filename;
-        } catch (Exception e) {
-            log.warn("[이미지 캐시] 저장 실패 articleId={}: {}", articleId, e.getMessage());
-            return null;
+        if (request.needsContent() && !article.isContentCrawled()) {
+            if (crawled.content() != null) article.updateDescription(crawled.content());
+            else article.markContentCrawled();
         }
     }
 
