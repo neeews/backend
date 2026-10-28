@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -85,6 +86,14 @@ public class ArticleService {
     // 건수를 고정하진 않지만, 큰 사건이 몰린 날 목록이 끝없이 길어지는 것만 막는다.
     private static final int TODAY_MAX_EVENTS = 20;
     private static final int POPULAR_WINDOW_DAYS = 7;
+
+    // MySQL ngram 파서의 토큰 크기(ngram_token_size 기본값). 이보다 짧은 글자만 있는 검색어는 인덱스로 찾을 수 없다.
+    private static final Pattern FULLTEXT_TERM = Pattern.compile("[\\p{L}\\p{N}]{2,}");
+    // FULLTEXT 결과를 제목 일치 우선으로 정렬하려면 매칭 행마다 본 테이블을 읽어야 해서 2만 건에 약 3초가 걸린다.
+    // 10만 건 기준으로 1,850건은 약 0.2초라, 정렬 의미(제목 우선)를 지키면서 비용이 감당되는 선을 3,000건으로 잡았다.
+    private static final long FULLTEXT_SORT_LIMIT = 3_000;
+    // IN ()이 빈 목록이 되면 SQL 오류라, 필터가 없거나 일치하는 값이 없을 때 채우는 자리표시 값
+    private static final List<String> NO_FILTER_VALUE = List.of("");
 
     private final ArticleRepository articleRepository;
     private final BookmarkService bookmarkService;
@@ -381,6 +390,10 @@ public class ArticleService {
         boolean hasCategories = categories != null && !categories.isEmpty();
         boolean hasSources = sourceNames != null && !sourceNames.isEmpty();
 
+        if (FULLTEXT_TERM.matcher(q).find()) {
+            return toResponsePage(searchByFulltext(q, hasCategories ? categories : List.of(), sourceNames, unsorted), email);
+        }
+
         if (hasCategories && hasSources) {
             List<NewsSource> sources = resolveNewsSources(sourceNames);
             return toResponsePage(articleRepository.searchByKeywordAndSourcesAndCategories(q, sources, categories, unsorted), email);
@@ -393,6 +406,33 @@ public class ArticleService {
             return toResponsePage(articleRepository.searchByKeywordAndSources(q, sources, unsorted), email);
         }
         return toResponsePage(articleRepository.searchByKeyword(q, unsorted), email);
+    }
+
+    // ngram은 검색어를 2글자 단위로 쪼개 따옴표 구문으로 찾는다. 따옴표로 감싸야 띄어쓰기까지 포함한 부분 문자열 검색(LIKE와 같은 의미)이 된다.
+    private Page<Article> searchByFulltext(String q, List<String> categories, List<String> sourceNames, Pageable pageable) {
+        boolean anySource = sourceNames == null || sourceNames.isEmpty();
+        List<NewsSource> sources = anySource ? List.of() : resolveNewsSources(sourceNames);
+        if (!anySource && sources.isEmpty()) return Page.empty(pageable);
+
+        String phrase = "\"" + q.replace('"', ' ').strip() + "\"";
+        long matches = articleRepository.countFulltext(phrase);
+        if (matches == 0) return Page.empty(pageable);
+
+        boolean anyCategory = categories.isEmpty();
+        List<String> categoryFilter = anyCategory ? NO_FILTER_VALUE : categories;
+        long total = anyCategory && anySource ? matches : articleRepository.countFulltext(
+                phrase, anyCategory, categoryFilter, anySource, anySource ? NO_FILTER_VALUE : sourceNamesOf(sources));
+
+        List<Article> content = matches > FULLTEXT_SORT_LIMIT
+                ? articleRepository.searchNewestFirst(q, anyCategory, categoryFilter, anySource,
+                        anySource ? List.of(NewsSource.values()[0]) : sources, pageable)
+                : articleRepository.searchFulltext(phrase, q, anyCategory, categoryFilter, anySource,
+                        anySource ? NO_FILTER_VALUE : sourceNamesOf(sources), pageable);
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private List<String> sourceNamesOf(List<NewsSource> sources) {
+        return sources.stream().map(NewsSource::name).toList();
     }
 
     private Page<ArticleResponse> toResponsePage(Page<Article> page, String email) {

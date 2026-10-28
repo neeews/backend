@@ -96,6 +96,44 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                         "AND a.source IN :sources AND a.category IN :categories")
     Page<Article> searchByKeywordAndSourcesAndCategories(@Param("q") String q, @Param("sources") List<NewsSource> sources, @Param("categories") List<String> categories, Pageable pageable);
 
+    // MATCH ... AGAINST는 JPQL로 표현할 수 없어 native를 쓴다. 인덱스는 migrations/20261001_article_fulltext_ngram.sql.
+    // 필터가 없을 땐 anyXxx=true로 조건을 끄고, IN이 빈 목록이 되지 않게 호출 쪽에서 자리표시 값을 채운다.
+    @Query(value = "SELECT a.* FROM articles a " +
+                  "WHERE MATCH(a.title, a.description) AGAINST (:phrase IN BOOLEAN MODE) " +
+                  "AND (:anyCategory = TRUE OR a.category IN (:categories)) " +
+                  "AND (:anySource = TRUE OR a.source IN (:sources)) " +
+                  "ORDER BY CASE WHEN LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) THEN 0 ELSE 1 END, a.published_at DESC",
+           nativeQuery = true)
+    List<Article> searchFulltext(@Param("phrase") String phrase, @Param("q") String q,
+                                 @Param("anyCategory") boolean anyCategory, @Param("categories") List<String> categories,
+                                 @Param("anySource") boolean anySource, @Param("sources") List<String> sources,
+                                 Pageable pageable);
+
+    // 필터 없는 건수는 인덱스만으로 세어져 본 테이블을 읽지 않는다.
+    @Query(value = "SELECT COUNT(*) FROM articles a WHERE MATCH(a.title, a.description) AGAINST (:phrase IN BOOLEAN MODE)",
+           nativeQuery = true)
+    long countFulltext(@Param("phrase") String phrase);
+
+    @Query(value = "SELECT COUNT(*) FROM articles a " +
+                  "WHERE MATCH(a.title, a.description) AGAINST (:phrase IN BOOLEAN MODE) " +
+                  "AND (:anyCategory = TRUE OR a.category IN (:categories)) " +
+                  "AND (:anySource = TRUE OR a.source IN (:sources))",
+           nativeQuery = true)
+    long countFulltext(@Param("phrase") String phrase,
+                       @Param("anyCategory") boolean anyCategory, @Param("categories") List<String> categories,
+                       @Param("anySource") boolean anySource, @Param("sources") List<String> sources);
+
+    // 흔한 검색어용: FULLTEXT 결과를 전부 정렬하는 대신 최신순 인덱스를 따라가며 앞쪽 몇 건만 찾는다.
+    @Query("SELECT a FROM Article a WHERE " +
+           "(LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "AND (:anyCategory = TRUE OR a.category IN :categories) " +
+           "AND (:anySource = TRUE OR a.source IN :sources) " +
+           "ORDER BY a.publishedAt DESC")
+    List<Article> searchNewestFirst(@Param("q") String q,
+                                    @Param("anyCategory") boolean anyCategory, @Param("categories") List<String> categories,
+                                    @Param("anySource") boolean anySource, @Param("sources") List<NewsSource> sources,
+                                    Pageable pageable);
+
     @Query("SELECT a FROM Article a WHERE a.cachedImagePath IS NOT NULL AND a.lastViewedAt < :threshold")
     List<Article> findExpiredCachedImages(@Param("threshold") LocalDateTime threshold);
 
