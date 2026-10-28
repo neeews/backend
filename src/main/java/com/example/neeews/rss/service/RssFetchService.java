@@ -1,6 +1,7 @@
 package com.example.neeews.rss.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.domain.NewsSource;
 import com.rometools.modules.content.ContentModule;
@@ -27,7 +28,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -44,8 +44,6 @@ public class RssFetchService {
 
     private final ArticleRepository articleRepository;
     private final ObjectMapper objectMapper;
-
-    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
 
     private static final Set<NewsSource> DEPRECATED_SOURCES = Set.of(
             NewsSource.YONHAP, NewsSource.DONGA, NewsSource.KHAN,
@@ -138,7 +136,7 @@ public class RssFetchService {
     // 건별로 커밋한다 — 수백 건을 한 트랜잭션으로 묶으면 크롤링이 끝날 때까지 커넥션을 잡고 있게 된다.
     public int recrawlMissingContent(NewsSource source) {
         List<Article> targets = articleRepository.findMissingContent(
-                source, LocalDateTime.now().minusDays(RECRAWL_WINDOW_DAYS),
+                source, PublishedTime.now().minusDays(RECRAWL_WINDOW_DAYS),
                 RECRAWL_MIN_BODY_LENGTH, PageRequest.of(0, RECRAWL_MAX_PER_RUN));
 
         int updated = 0;
@@ -226,8 +224,8 @@ public class RssFetchService {
     // published_at을 조건이나 정렬에 쓰는 모든 조회에서 통째로 누락되므로 수집 시각으로 대체한다.
     private LocalDateTime resolvePublishedAt(SyndEntry entry) {
         Date date = entry.getPublishedDate() != null ? entry.getPublishedDate() : entry.getUpdatedDate();
-        if (date == null) return LocalDateTime.now(SEOUL_ZONE);
-        return date.toInstant().atZone(SEOUL_ZONE).toLocalDateTime();
+        if (date == null) return PublishedTime.now();
+        return date.toInstant().atZone(PublishedTime.ZONE).toLocalDateTime();
     }
 
     public String crawlArticleContent(String url, String sourceName) {

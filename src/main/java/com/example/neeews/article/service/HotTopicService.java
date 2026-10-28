@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.domain.TopicMentionCount;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.article.repository.TopicMentionCountRepository;
@@ -15,6 +16,7 @@ import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,10 +58,14 @@ public class HotTopicService {
     @Transactional
     public void refreshHotTopic() {
         log.info("[핫이슈] 급상승 주제 갱신 시작");
-        LocalDate today = LocalDate.now();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = PublishedTime.today();
+        LocalDateTime now = PublishedTime.now();
 
-        List<Article> hourlyArticles = articleRepository.findByPublishedAtBetween(now.minusHours(1), now);
+        // 발행시각으로 자르면 RSS에 늦게 올라온 기사(10:55 발행, 11:05 수집)가 어느 시간 창에도 안 걸려 빠진다.
+        // 수집 시각(UTC)은 저장할 때 한 번 찍히므로, 정시 단위로 자르면 모든 기사가 정확히 한 번씩 집계된다.
+        LocalDateTime fetchedUntil = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS);
+        List<Article> hourlyArticles = articleRepository.findByFetchedAtGreaterThanEqualAndFetchedAtLessThan(
+                fetchedUntil.minusHours(1), fetchedUntil);
 
         Map<String, Long> hourlyWordCount = hourlyArticles.stream()
                 .map(a -> a.getTitle() + " " + (a.getDescription() != null

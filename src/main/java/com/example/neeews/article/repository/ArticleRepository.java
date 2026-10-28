@@ -22,7 +22,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop10ByOrderByPublishedAtDesc();
 
-    List<Article> findByPublishedAtBetween(LocalDateTime start, LocalDateTime end);
+    List<Article> findByFetchedAtGreaterThanEqualAndFetchedAtLessThan(LocalDateTime from, LocalDateTime to);
 
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
@@ -48,15 +48,17 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     // 기존 HN 점수 (조회수+1)/(경과일수+1)^2.0은 로그로 눌러 보조 점수로만 얹고 0.15로 상한을 둔다 —
     // 조회수가 아무리 많아도 중요도 점수 차이(0.15 이상)를 뒤집지 못하게 하려는 것.
     // 최근 :since 이후 기사만 후보로 삼아, 초기 저트래픽 구간에 조회수가 몰린 오래된 기사가 상단을 점유하지 않게 한다.
-    // GREATEST(..., 0): RSS 발행시각이 서버 시각(UTC)보다 미래인 기사가 있어 음수 나이를 0으로 클램프
+    // published_at은 한국 시간이라 DB의 NOW()(UTC)와 빼면 9시간 어긋난다. 기준 시각은 호출 쪽에서 같은 시간대로 넘긴다.
+    // GREATEST(..., 0): 발행시각이 기준 시각보다 미래로 들어온 기사가 있어도 나이가 음수가 되지 않게 0으로 클램프
     @Query(value = "SELECT * FROM articles a WHERE (:category IS NULL OR a.category = :category) " +
                   "AND a.published_at >= :since " +
                   "ORDER BY COALESCE(a.ai_importance_score, 0.5) + LEAST(LOG10(" +
-                  "(a.view_count + 1) / POW(GREATEST(TIMESTAMPDIFF(HOUR, a.published_at, NOW()), 0) / 24.0 + 1, 2.0) + 1" +
+                  "(a.view_count + 1) / POW(GREATEST(TIMESTAMPDIFF(HOUR, a.published_at, :now), 0) / 24.0 + 1, 2.0) + 1" +
                   ") * 0.05, 0.15) DESC, a.published_at DESC",
            countQuery = "SELECT COUNT(*) FROM articles a WHERE (:category IS NULL OR a.category = :category) AND a.published_at >= :since",
            nativeQuery = true)
-    Page<Article> findByCategoryOrderByPopularity(@Param("category") String category, @Param("since") LocalDateTime since, Pageable pageable);
+    Page<Article> findByCategoryOrderByPopularity(@Param("category") String category, @Param("since") LocalDateTime since,
+                                                  @Param("now") LocalDateTime now, Pageable pageable);
 
     @Query(value = "SELECT a FROM Article a WHERE " +
                   "LOWER(a.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +

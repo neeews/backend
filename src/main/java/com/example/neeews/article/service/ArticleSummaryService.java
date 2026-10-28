@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +73,7 @@ public class ArticleSummaryService {
     // 화면이 "오늘 있었던 중요한 일"만 담는 곳이라 카테고리가 비어도 상관없기 때문이다.
     // 노출 쿼리와 같은 min-score를 써야, 요약해 놓고 목록에 안 뜨는 기사가 생기지 않는다.
     private List<Article> pickCandidates() {
-        LocalDateTime since = LocalDateTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
+        LocalDateTime since = PublishedTime.now().minusHours(CANDIDATE_WINDOW_HOURS);
         return articleRepository.findUnsummarizedImportant(
                 since, minScore, MIN_BODY_LENGTH, PageRequest.of(0, batchSize));
     }

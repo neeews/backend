@@ -2,6 +2,7 @@ package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.domain.Importance;
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
@@ -25,7 +26,6 @@ import org.springframework.web.util.HtmlUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -114,7 +114,7 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<HeadlineSectionResponse> getHeadlines(String email) {
-        LocalDateTime from = LocalDate.now().atStartOfDay();
+        LocalDateTime from = PublishedTime.startOfToday();
         Pageable limit = PageRequest.of(0, HEADLINE_CANDIDATE_LIMIT);
 
         List<String> categories = new ArrayList<>(articleRepository.findHeadlineCategories(from));
@@ -137,7 +137,7 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<DailySummaryResponse> getDailySummaries() {
-        LocalDateTime todayFrom = LocalDate.now().atStartOfDay();
+        LocalDateTime todayFrom = PublishedTime.startOfToday();
 
         List<DailySummaryResponse> events = pickEventsSince(todayFrom);
         if (events.size() < TODAY_MIN_COUNT) {
@@ -179,7 +179,7 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
-        LocalDateTime fallbackFrom = LocalDateTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS);
+        LocalDateTime fallbackFrom = PublishedTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS);
         List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
         fill(articles, HOT_ARTICLE_COUNT,
                 () -> articleRepository.findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
@@ -258,7 +258,7 @@ public class ArticleService {
         if (hotTopics.isEmpty()) {
             return result;
         }
-        LocalDateTime since = LocalDateTime.now().minusHours(HOT_TOPIC_WINDOW_HOURS);
+        LocalDateTime since = PublishedTime.now().minusHours(HOT_TOPIC_WINDOW_HOURS);
         List<List<Article>> perTopic = hotTopics.stream()
                 .map(topic -> articleRepository.findTopByTopicSince(topic, since, PageRequest.of(0, HOT_ARTICLE_COUNT)))
                 .toList();
@@ -366,9 +366,10 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public Page<ArticleResponse> getArticlesByCategory(String category, String sort, int page, String email) {
+        LocalDateTime now = PublishedTime.now();
         Page<Article> result = "popular".equals(sort)
                 ? articleRepository.findByCategoryOrderByPopularity(category,
-                        LocalDateTime.now().minusDays(POPULAR_WINDOW_DAYS), PageRequest.of(page - 1, 21))
+                        now.minusDays(POPULAR_WINDOW_DAYS), now, PageRequest.of(page - 1, 21))
                 : articleRepository.findByCategoryOptional(category,
                         PageRequest.of(page - 1, 21, Sort.by(Sort.Direction.DESC, "publishedAt")));
         return toResponsePage(result, email);

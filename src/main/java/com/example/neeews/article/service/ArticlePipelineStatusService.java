@@ -1,5 +1,6 @@
 package com.example.neeews.article.service;
 
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.dto.response.PipelineStatusResponse;
 import com.example.neeews.article.dto.response.PipelineStatusResponse.Status;
 import com.example.neeews.article.dto.response.PipelineStatusResponse.StageStatus;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -67,7 +67,7 @@ public class ArticlePipelineStatusService {
     }
 
     private StageStatus importanceStage() {
-        LocalDateTime from = LocalDate.now().minusDays(IMPORTANCE_JUDGE_WINDOW_DAYS).atStartOfDay();
+        LocalDateTime from = PublishedTime.today().minusDays(IMPORTANCE_JUDGE_WINDOW_DAYS).atStartOfDay();
         long backlog = articleRepository.countByAiImportanceIsNullAndPublishedAtAfter(from);
         LocalDateTime lastJudged = articleRepository.findLastImportanceJudgedAt();
 
@@ -84,11 +84,11 @@ public class ArticlePipelineStatusService {
     }
 
     private StageStatus summaryStage() {
-        LocalDateTime windowFrom = LocalDateTime.now().minusHours(SUMMARY_WINDOW_HOURS);
+        LocalDateTime windowFrom = PublishedTime.now().minusHours(SUMMARY_WINDOW_HOURS);
         long backlog = articleRepository.countSummaryBacklog(
                 windowFrom, summaryMinScore, ArticleSummaryService.MIN_BODY_LENGTH);
         long todayCount = articleRepository.countSummarizedImportantSince(
-                LocalDate.now().atStartOfDay(), summaryMinScore);
+                PublishedTime.startOfToday(), summaryMinScore);
         LocalDateTime lastSummarized = articleRepository.findLastSummarizedAt();
 
         if (lastSummarized == null) {
@@ -115,6 +115,7 @@ public class ArticlePipelineStatusService {
                 "오늘 " + todayCount + "건 요약 · 대기 " + backlog + "건", lastSummarized, backlog);
     }
 
+    // 수집·판정·요약 시각(fetchedAt 등)은 publishedAt과 달리 UTC로 저장돼 UTC 현재 시각과 비교한다.
     private static long minutesSince(LocalDateTime at) {
         return Duration.between(at, LocalDateTime.now()).toMinutes();
     }

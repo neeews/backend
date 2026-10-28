@@ -2,6 +2,7 @@ package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.domain.Importance;
+import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.service.RssFetchService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,7 +38,7 @@ public class ArticleImportanceAiService {
     private double threshold;
 
     public void judgeBatch() {
-        LocalDateTime from = LocalDate.now().minusDays(JUDGE_WINDOW_DAYS).atStartOfDay();
+        LocalDateTime from = PublishedTime.today().minusDays(JUDGE_WINDOW_DAYS).atStartOfDay();
         List<Article> candidates =
                 articleRepository.findUnjudged(from, PageRequest.of(0, maxPerRun));
         if (candidates.isEmpty()) {
