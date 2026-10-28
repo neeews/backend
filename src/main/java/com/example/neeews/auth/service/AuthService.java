@@ -95,6 +95,8 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+        // 탈취된 계정을 되찾으려고 재설정하는 경우가 많아, 기존에 발급된 로그인 세션을 모두 끊는다.
+        refreshTokenRepository.deleteByUser(user);
         emailVerificationService.consumeVerification(request.getEmail());
     }
 
