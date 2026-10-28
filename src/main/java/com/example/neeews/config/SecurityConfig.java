@@ -44,7 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/articles", "/articles/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/search").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/news/**").permitAll()
-                        .requestMatchers("/rss/**").permitAll()
+                        // 자동 수집은 스케줄러가 서비스를 직접 부르므로 여기와 무관하다. HTTP로 여는 건 관리자의 수동 실행뿐이다.
+                        .requestMatchers("/rss/**").hasAuthority("ROLE_ADMIN")
                         // 비로그인 방문자도 세야 해서 인증 없이 받는다.
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/visits/ping").permitAll()
                         // 도커·모니터링이 찌르는 경로라 인증 없이 연다. /actuator/** 전체를 열면
