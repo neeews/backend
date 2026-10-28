@@ -1,9 +1,6 @@
 package com.example.neeews.articleread.service;
 
-import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.dto.response.ArticleResponse;
-import com.example.neeews.article.repository.ArticleRepository;
-import com.example.neeews.articleread.domain.ArticleRead;
 import com.example.neeews.articleread.repository.ArticleReadRepository;
 import com.example.neeews.auth.domain.User;
 import com.example.neeews.auth.repository.UserRepository;
@@ -12,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -24,19 +22,12 @@ public class ArticleReadService {
 
     private final ArticleReadRepository articleReadRepository;
     private final UserRepository userRepository;
-    private final ArticleRepository articleRepository;
 
     @Transactional
     public void markAsRead(Long articleId, String email) {
         if (email == null) return;
         User user = getUser(email);
-        articleReadRepository.findByUserAndArticleId(user, articleId)
-                .ifPresentOrElse(
-                        ArticleRead::touchReadAt,
-                        () -> {
-                            Article article = articleRepository.getReferenceById(articleId);
-                            articleReadRepository.save(ArticleRead.builder().user(user).article(article).build());
-                        });
+        articleReadRepository.upsertRead(user.getId(), articleId, LocalDateTime.now());
     }
 
     @Transactional(readOnly = true)

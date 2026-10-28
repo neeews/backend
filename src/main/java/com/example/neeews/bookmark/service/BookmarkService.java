@@ -2,13 +2,14 @@ package com.example.neeews.bookmark.service;
 
 import com.example.neeews.auth.domain.User;
 import com.example.neeews.auth.repository.UserRepository;
-import com.example.neeews.bookmark.domain.Bookmark;
 import com.example.neeews.bookmark.repository.BookmarkRepository;
 import com.example.neeews.article.domain.Article;
 import com.example.neeews.article.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -22,18 +23,14 @@ public class BookmarkService {
     public void addBookmark(Long articleId, String email) {
         User user = getUser(email);
         Article article = getArticle(articleId);
-        if (bookmarkRepository.existsByUserAndArticle(user, article)) {
-            return;
-        }
-        bookmarkRepository.save(Bookmark.builder().user(user).article(article).build());
+        bookmarkRepository.insertIfAbsent(user.getId(), article.getId(), LocalDateTime.now());
     }
 
     @Transactional
     public void removeBookmark(Long articleId, String email) {
         User user = getUser(email);
         Article article = getArticle(articleId);
-        bookmarkRepository.findByUserAndArticle(user, article)
-                .ifPresent(bookmarkRepository::delete);
+        bookmarkRepository.deleteByUserAndArticle(user, article);
     }
 
     @Transactional(readOnly = true)

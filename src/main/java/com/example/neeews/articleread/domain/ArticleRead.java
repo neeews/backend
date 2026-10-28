@@ -41,8 +41,4 @@ public class ArticleRead {
         this.createdAt = now;
         this.lastReadAt = now;
     }
-
-    public void touchReadAt() {
-        this.lastReadAt = LocalDateTime.now();
-    }
 }
