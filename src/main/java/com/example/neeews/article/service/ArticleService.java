@@ -87,6 +87,10 @@ public class ArticleService {
     private static final int TODAY_MAX_EVENTS = 20;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
+    private static final String FEED_BREAKING = "breaking";
+    private static final String FEED_LATEST = "latest";
+    private static final String FEED_HOT = "hot";
+
     // MySQL ngram 파서의 토큰 크기(ngram_token_size 기본값). 이보다 짧은 글자만 있는 검색어는 인덱스로 찾을 수 없다.
     private static final Pattern FULLTEXT_TERM = Pattern.compile("[\\p{L}\\p{N}]{2,}");
     // FULLTEXT 결과를 제목 일치 우선으로 정렬하려면 매칭 행마다 본 테이블을 읽어야 해서 2만 건에 약 3초가 걸린다.
@@ -101,6 +105,7 @@ public class ArticleService {
     private final RssFetchService rssFetchService;
     private final ExternalImageFetcher externalImageFetcher;
     private final HotTopicService hotTopicService;
+    private final HomeFeedCache homeFeedCache;
 
     @Value("${app.image.storage-path}")
     private String imageStoragePath;
@@ -113,16 +118,29 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getBreakingArticles(String email) {
-        return toResponses(articleRepository.findTop10ByOrderByPublishedAtDesc(), email);
+        return markRead(homeFeedCache.articles(FEED_BREAKING,
+                () -> toResponses(articleRepository.findTop10ByOrderByPublishedAtDesc(), null)), email);
     }
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getLatestArticles(String email) {
-        return toResponses(articleRepository.findTop5ByOrderByPublishedAtDesc(), email);
+        return markRead(homeFeedCache.articles(FEED_LATEST,
+                () -> toResponses(articleRepository.findTop5ByOrderByPublishedAtDesc(), null)), email);
     }
 
     @Transactional(readOnly = true)
     public List<HeadlineSectionResponse> getHeadlines(String email) {
+        List<HeadlineSectionResponse> sections = homeFeedCache.headlines(this::loadHeadlines);
+        if (email == null) return sections;
+
+        List<Long> ids = sections.stream().flatMap(s -> s.getArticles().stream()).map(ArticleResponse::getId).toList();
+        Set<Long> readIds = articleReadService.getReadArticleIds(email, ids);
+        return sections.stream()
+                .map(s -> s.withArticles(s.getArticles().stream().map(a -> a.withRead(readIds.contains(a.getId()))).toList()))
+                .toList();
+    }
+
+    private List<HeadlineSectionResponse> loadHeadlines() {
         LocalDateTime from = PublishedTime.startOfToday();
         Pageable limit = PageRequest.of(0, HEADLINE_CANDIDATE_LIMIT);
 
@@ -134,9 +152,9 @@ public class ArticleService {
             List<Article> articles = distinctEvents(
                     articleRepository.findHeadlines(category, from, limit), HEADLINES_PER_CATEGORY);
             if (articles.isEmpty()) continue;
-            sections.add(HeadlineSectionResponse.of(category, toResponses(articles, email)));
+            sections.add(HeadlineSectionResponse.of(category, toResponses(articles, null)));
         }
-        return sections;
+        return List.copyOf(sections);
     }
 
     private static int categoryOrder(String category) {
@@ -146,6 +164,10 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<DailySummaryResponse> getDailySummaries() {
+        return homeFeedCache.dailySummaries(this::loadDailySummaries);
+    }
+
+    private List<DailySummaryResponse> loadDailySummaries() {
         LocalDateTime todayFrom = PublishedTime.startOfToday();
 
         List<DailySummaryResponse> events = pickEventsSince(todayFrom);
@@ -188,6 +210,10 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> getHotArticles(String email) {
+        return markRead(homeFeedCache.articles(FEED_HOT, this::loadHotArticles), email);
+    }
+
+    private List<ArticleResponse> loadHotArticles() {
         LocalDateTime fallbackFrom = PublishedTime.now().minusHours(HOT_FALLBACK_WINDOW_HOURS);
         List<Article> articles = pickHotTopicArticles(hotTopicService.getCurrentHotTopics());
         fill(articles, HOT_ARTICLE_COUNT,
@@ -197,7 +223,7 @@ public class ArticleService {
         fill(articles, HOT_ARTICLE_COUNT,
                 () -> articleRepository.findTop6ByAiImportanceIsNullAndPublishedAtAfterOrderByPublishedAtDesc(
                         fallbackFrom));
-        return toResponses(articles, email);
+        return toResponses(articles, null);
     }
 
     private void fill(List<Article> target, int limit, Supplier<List<Article>> source) {
@@ -291,6 +317,14 @@ public class ArticleService {
         return articles.stream()
                 .map(a -> ArticleResponse.from(a, readIds.contains(a.getId())))
                 .toList();
+    }
+
+    // 캐시된 목록은 모두에게 같은 비로그인 결과라, 로그인 사용자에게만 읽음 표시를 쿼리 한 번으로 덧씌운다.
+    private List<ArticleResponse> markRead(List<ArticleResponse> articles, String email) {
+        if (email == null) return articles;
+        Set<Long> readIds = articleReadService.getReadArticleIds(
+                email, articles.stream().map(ArticleResponse::getId).toList());
+        return articles.stream().map(a -> a.withRead(readIds.contains(a.getId()))).toList();
     }
 
     @Transactional

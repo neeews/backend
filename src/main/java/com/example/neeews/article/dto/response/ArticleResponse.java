@@ -8,7 +8,7 @@ import org.springframework.web.util.HtmlUtils;
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class ArticleResponse {
 
     private Long id;
@@ -35,6 +35,10 @@ public class ArticleResponse {
                 .publishedAt(article.getPublishedAt())
                 .isRead(isRead)
                 .build();
+    }
+
+    public ArticleResponse withRead(boolean isRead) {
+        return toBuilder().isRead(isRead).build();
     }
 
     private static String extractSummary(String description) {

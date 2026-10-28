@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.util.List;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class HeadlineSectionResponse {
 
     private String category;
@@ -19,5 +19,9 @@ public class HeadlineSectionResponse {
                 .title(category + " 주요기사")
                 .articles(articles)
                 .build();
+    }
+
+    public HeadlineSectionResponse withArticles(List<ArticleResponse> articles) {
+        return toBuilder().articles(articles).build();
     }
 }
