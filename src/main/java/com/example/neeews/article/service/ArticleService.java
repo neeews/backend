@@ -40,7 +40,7 @@ public class ArticleService {
 
     private static final int HEADLINES_PER_CATEGORY = 5;
     private static final List<String> CATEGORY_ORDER =
-            List.of("정치", "경제", "사회", "세계", "IT/과학", "생활/문화", "연예/문화", "스포츠");
+            List.of("정치", "경제", "사회", "세계", "IT/과학", "AI/개발", "생활/문화", "연예/문화", "스포츠");
 
     // 같은 사건을 여러 매체가 쓰면 muni 점수도 나란히 높게 나와 상위 칸이 한 사건으로 채워진다.
     // 제목 문자 bigram이 짧은 쪽 기준으로 이 비율 이상 겹치면 같은 사건으로 본다.

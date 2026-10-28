@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 @Slf4j
 @Service
@@ -60,9 +61,21 @@ public class RssFetchService {
         Map.entry("ZDnet코리아", "div#articleBody"),
         Map.entry("동아일보", "section.news_view"),
         Map.entry("SBS", "div.text_area"),
-        Map.entry("아이뉴스24", "#articleBody")
+        Map.entry("아이뉴스24", "#articleBody"),
+        Map.entry("바이라인네트워크", "div.entry-content"),
+        Map.entry("AI타임스", "article#article-view-content-div"),
+        Map.entry("GeekNews", "#topic_contents"),
+        Map.entry("Hugging Face", "div.blog-content"),
+        // 두 곳 모두 본문이 div.rich-text 여러 개로 쪼개져 있고, 폴백이 먼저 잡는 <article>은 관련 글 카드다.
+        Map.entry("Google DeepMind", "main"),
+        Map.entry("Google AI", "main")
+        // OpenAI는 기사 페이지가 봇 요청에 403을 준다. RSS 요약만 쓴다.
         // 조선일보는 CSS 셀렉터로 못 잡는다. crawlChosunContent가 Fusion 메타데이터에서 본문을 꺼낸다.
     );
+
+    // OpenAI·Hugging Face 피드는 2015·2020년 글까지 전부(1,300건·890건) 내려준다.
+    // 그대로 두면 첫 수집에 몇 년 치가 쌓이고, 매 주기 그 건수만큼 existsByLink를 친다.
+    private static final int MAX_ENTRY_AGE_DAYS = 7;
 
     // 크롤러를 고치기 전에 수집돼 본문이 RSS 요약뿐인 기사를 다시 긁을 때 쓰는 한도.
     // 한 번에 다 돌면 요청이 몇 분씩 걸려, 나눠 호출하도록 건수를 끊는다.
@@ -156,18 +169,22 @@ public class RssFetchService {
         try {
             HttpURLConnection conn = openConnection(source.getRssUrl());
             SyndFeed feed;
-            try (InputStream is = conn.getInputStream()) {
+            // DeepMind는 Accept-Encoding을 보내지 않아도 gzip으로 내려준다. HttpURLConnection은 이를 풀어주지 않는다.
+            try (InputStream is = "gzip".equalsIgnoreCase(conn.getContentEncoding())
+                    ? new GZIPInputStream(conn.getInputStream()) : conn.getInputStream()) {
                 feed = new SyndFeedInput().build(new XmlReader(is));
             }
+            LocalDateTime cutoff = PublishedTime.now().minusDays(MAX_ENTRY_AGE_DAYS);
             for (SyndEntry entry : feed.getEntries()) {
                 String link = entry.getLink();
-                if (link == null || articleRepository.existsByLink(link)) {
+                LocalDateTime publishedAt = resolvePublishedAt(entry);
+                if (link == null || publishedAt.isBefore(cutoff) || articleRepository.existsByLink(link)) {
                     continue;
                 }
                 try {
-                    LocalDateTime publishedAt = resolvePublishedAt(entry);
                     String description = entry.getDescription() != null ? entry.getDescription().getValue() : null;
                     if (description == null || description.isBlank()) description = extractContentEncoded(entry);
+                    if (description == null || description.isBlank()) description = extractAtomContent(entry);
                     String author = entry.getAuthor();
                     if (author == null || author.isBlank()) {
                         author = source.getDisplayName();
@@ -197,6 +214,14 @@ public class RssFetchService {
             log.error("[RSS] {} 수집 실패", source.getDisplayName(), e);
         }
         return saved;
+    }
+
+    // GeekNews 같은 Atom 피드는 <summary> 없이 <content>에만 본문을 싣고, Rome은 이를 description이 아닌 contents로 넘긴다.
+    private String extractAtomContent(SyndEntry entry) {
+        for (var content : entry.getContents()) {
+            if (content.getValue() != null && !content.getValue().isBlank()) return content.getValue();
+        }
+        return null;
     }
 
     // 조선일보는 <description>이 비어 있고 <content:encoded>에만 본문이 들어온다.

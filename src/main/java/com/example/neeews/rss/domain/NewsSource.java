@@ -59,8 +59,17 @@ public enum NewsSource {
     HANI_SCIENCE("한겨레", "https://www.hani.co.kr/rss/science", "IT/과학"),
     INEWS24_IT("아이뉴스24", "https://www.inews24.com/rss/news_it.xml", "IT/과학"),
     DONGA_SCIENCE("동아일보", "https://rss.donga.com/science.xml", "IT/과학"),
+    BYLINE("바이라인네트워크", "https://byline.network/feed/", "IT/과학"),
     // 피드가 2025-03-19 이후 갱신 중단 — 수집 대상에서 제외했으나 기존 DB 데이터 호환용으로 남긴다
-    KHAN_IT("경향신문", "https://www.khan.co.kr/rss/rssdata/it_news.xml", "IT/과학");
+    KHAN_IT("경향신문", "https://www.khan.co.kr/rss/rssdata/it_news.xml", "IT/과학"),
+
+    // AI/개발
+    AITIMES("AI타임스", "https://www.aitimes.com/rss/allArticle.xml", "AI/개발"),
+    GEEKNEWS("GeekNews", "https://news.hada.io/rss/news", "AI/개발"),
+    OPENAI("OpenAI", "https://openai.com/news/rss.xml", "AI/개발"),
+    HUGGINGFACE("Hugging Face", "https://huggingface.co/blog/feed.xml", "AI/개발"),
+    GOOGLE_DEEPMIND("Google DeepMind", "https://deepmind.google/blog/rss.xml", "AI/개발"),
+    GOOGLE_AI("Google AI", "https://blog.google/technology/ai/rss/", "AI/개발");
 
     private final String displayName;
     private final String rssUrl;

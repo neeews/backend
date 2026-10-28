@@ -121,7 +121,8 @@ docker-compose up -d
 | 연예/문화 | 연합뉴스 (연예), 연합뉴스 (문화) |
 | 스포츠 | 연합뉴스, 한겨레 |
 | 세계 | 연합뉴스, 한겨레 |
-| IT/과학 | 전자신문, ZDNet 코리아, 연합뉴스, 한겨레 |
+| IT/과학 | 전자신문, ZDNet 코리아, 연합뉴스, 한겨레, 바이라인네트워크 |
+| AI/개발 | AI타임스, GeekNews, OpenAI, Hugging Face, Google DeepMind, Google AI |
 
 ## 패키지 구조
 
