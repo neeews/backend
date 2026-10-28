@@ -28,6 +28,10 @@ public class EmailVerification {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private int failedAttempts = 0;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -38,5 +42,9 @@ public class EmailVerification {
 
     public void verify() {
         this.verified = true;
+    }
+
+    public void recordFailedAttempt() {
+        this.failedAttempts++;
     }
 }

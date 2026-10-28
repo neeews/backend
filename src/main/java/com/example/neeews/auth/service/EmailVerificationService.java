@@ -19,7 +19,13 @@ import java.time.LocalDateTime;
 public class EmailVerificationService {
 
     private static final String SENDER_DISPLAY_NAME = "neeews";
+    // 하루 발송 횟수를 이 테이블의 행으로 세므로, 하루보다 짧게 줄이면 발송 제한이 풀린다.
     private static final int EXPIRED_RETENTION_DAYS = 1;
+    // 6자리 코드는 시도 제한이 없으면 5분 안에 대입으로 뚫린다. 코드 하나당 이 횟수까지만 받는다.
+    private static final int MAX_VERIFY_ATTEMPTS = 5;
+    private static final int RESEND_COOLDOWN_SECONDS = 60;
+    // 코드를 새로 받으면 시도 횟수도 새로 생기므로 발송 횟수까지 묶어야 대입 총량이 막힌다(하루 최대 50번 / 100만).
+    private static final int MAX_SENDS_PER_DAY = 10;
 
     private final EmailVerificationRepository emailVerificationRepository;
     private final JavaMailSender mailSender;
@@ -37,12 +43,13 @@ public class EmailVerificationService {
         sendCode(email, "[neeews] 비밀번호 재설정 코드");
     }
 
-    @Transactional
+    // 틀린 횟수는 예외를 던진 뒤에도 저장돼야 하므로 IllegalArgumentException으로는 롤백하지 않는다.
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void verifyCode(EmailVerifyRequest request) {
         verifyCodeDirect(request.getEmail(), request.getCode());
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void verifyCodeDirect(String email, String code) {
         EmailVerification verification = emailVerificationRepository
                 .findTopByEmailOrderByCreatedAtDesc(email)
@@ -50,7 +57,11 @@ public class EmailVerificationService {
         if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("인증 코드가 만료되었습니다.");
         }
+        if (verification.getFailedAttempts() >= MAX_VERIFY_ATTEMPTS) {
+            throw new IllegalArgumentException("인증 시도 횟수를 초과했습니다. 인증 코드를 다시 요청해주세요.");
+        }
         if (!verification.getCode().equals(code)) {
+            verification.recordFailedAttempt();
             throw new IllegalArgumentException("인증 코드가 올바르지 않습니다.");
         }
         verification.verify();
@@ -79,6 +90,7 @@ public class EmailVerificationService {
     }
 
     private void sendCode(String email, String subject) {
+        checkSendLimit(email);
         String code = generateCode();
         emailVerificationRepository.save(EmailVerification.builder()
                 .email(email)
@@ -92,6 +104,19 @@ public class EmailVerificationService {
         message.setSubject(subject);
         message.setText("인증 코드: " + code + "\n\n5분 이내에 입력해주세요.");
         mailSender.send(message);
+    }
+
+    private void checkSendLimit(String email) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean tooSoon = emailVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
+                .filter(latest -> latest.getCreatedAt().isAfter(now.minusSeconds(RESEND_COOLDOWN_SECONDS)))
+                .isPresent();
+        if (tooSoon) {
+            throw new IllegalArgumentException("인증 코드는 1분에 한 번만 요청할 수 있습니다.");
+        }
+        if (emailVerificationRepository.countByEmailAndCreatedAtAfter(email, now.minusDays(1)) >= MAX_SENDS_PER_DAY) {
+            throw new IllegalArgumentException("오늘 인증 코드 요청 횟수를 초과했습니다. 나중에 다시 시도해주세요.");
+        }
     }
 
     private String generateCode() {
