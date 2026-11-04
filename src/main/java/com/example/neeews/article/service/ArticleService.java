@@ -180,17 +180,21 @@ public class ArticleService {
     }
 
     // 점수 높은 순으로 들어오므로 각 묶음의 첫 기사가 그 사건의 대표가 된다.
+    // 비그램은 기사마다 한 번만 만든다. 쌍마다 새로 만들면 일주일 치(수백 건)에서 비교 비용이 제곱으로 불어난다.
     private static List<List<Article>> clusterByEvent(List<Article> candidates) {
-        List<List<Article>> clusters = new ArrayList<>();
+        List<List<EventFeatures>> clusters = new ArrayList<>();
         for (Article candidate : candidates) {
+            EventFeatures features = EventFeatures.of(candidate);
             clusters.stream()
-                    .filter(cluster -> isSameEventAsAny(candidate, cluster))
+                    .filter(cluster -> cluster.stream().anyMatch(features::isSameEvent))
                     .findFirst()
                     .ifPresentOrElse(
-                            cluster -> cluster.add(candidate),
-                            () -> clusters.add(new ArrayList<>(List.of(candidate))));
+                            cluster -> cluster.add(features),
+                            () -> clusters.add(new ArrayList<>(List.of(features))));
         }
-        return clusters;
+        return clusters.stream()
+                .map(cluster -> cluster.stream().map(EventFeatures::article).toList())
+                .toList();
     }
 
     // 한 매체가 같은 사건을 여러 번 써도 한 곳으로 센다. 매체 수가 곧 중요도 신호이기 때문이다.
@@ -241,9 +245,20 @@ public class ArticleService {
     }
 
     private static boolean isSameEvent(Article a, Article b) {
-        return overlapRatio(charBigrams(a.getTitle()), charBigrams(b.getTitle())) >= SAME_EVENT_TITLE_OVERLAP
-                || overlapRatio(summaryBigrams(a), summaryBigrams(b)) >= SAME_EVENT_SUMMARY_OVERLAP
-                || overlapRatio(bodyBigrams(a), bodyBigrams(b)) >= SAME_EVENT_BODY_OVERLAP;
+        return EventFeatures.of(a).isSameEvent(EventFeatures.of(b));
+    }
+
+    private record EventFeatures(Article article, Set<String> title, Set<String> summary, Set<String> body) {
+
+        static EventFeatures of(Article article) {
+            return new EventFeatures(article, charBigrams(article.getTitle()), summaryBigrams(article), bodyBigrams(article));
+        }
+
+        boolean isSameEvent(EventFeatures other) {
+            return overlapRatio(title, other.title) >= SAME_EVENT_TITLE_OVERLAP
+                    || overlapRatio(summary, other.summary) >= SAME_EVENT_SUMMARY_OVERLAP
+                    || overlapRatio(body, other.body) >= SAME_EVENT_BODY_OVERLAP;
+        }
     }
 
     // 요약이 아직 안 달린 기사는 빈 집합이 되어 이 조건으로는 걸리지 않는다 (헤드라인이 그렇다).
