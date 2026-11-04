@@ -3,6 +3,7 @@ package com.example.neeews.article.service;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
 import com.example.neeews.article.dto.response.HeadlineSectionResponse;
+import com.example.neeews.article.dto.response.WeeklyEventResponse;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.stereotype.Component;
@@ -21,11 +22,14 @@ public class HomeFeedCache {
     private static final Duration FEED_TTL = Duration.ofSeconds(60);
     // 요약 배치가 매시간 도는 목록이고 계산이 가장 무거워 더 길게 둔다.
     private static final Duration DAILY_SUMMARY_TTL = Duration.ofMinutes(5);
+    // 일주일 치를 묶어 계산이 가장 무겁고, 한 주 단위 목록이라 몇 분 늦게 바뀌어도 상관없다.
+    private static final Duration WEEKLY_EVENTS_TTL = Duration.ofMinutes(30);
     private static final int MAX_ENTRIES = 16;
 
     private final Cache<String, List<ArticleResponse>> articleLists = newCache(FEED_TTL);
     private final Cache<String, List<HeadlineSectionResponse>> headlines = newCache(FEED_TTL);
     private final Cache<String, List<DailySummaryResponse>> dailySummaries = newCache(DAILY_SUMMARY_TTL);
+    private final Cache<String, List<WeeklyEventResponse>> weeklyEvents = newCache(WEEKLY_EVENTS_TTL);
 
     public List<ArticleResponse> articles(String key, Supplier<List<ArticleResponse>> loader) {
         return articleLists.get(key, k -> loader.get());
@@ -37,6 +41,10 @@ public class HomeFeedCache {
 
     public List<DailySummaryResponse> dailySummaries(Supplier<List<DailySummaryResponse>> loader) {
         return dailySummaries.get("today", k -> loader.get());
+    }
+
+    public List<WeeklyEventResponse> weeklyEvents(Supplier<List<WeeklyEventResponse>> loader) {
+        return weeklyEvents.get("week", k -> loader.get());
     }
 
     private static <T> Cache<String, T> newCache(Duration ttl) {

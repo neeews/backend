@@ -4,6 +4,7 @@ import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
 import com.example.neeews.article.dto.response.HeadlineSectionResponse;
+import com.example.neeews.article.dto.response.WeeklyEventResponse;
 import com.example.neeews.article.service.ArticleService;
 import com.example.neeews.security.AuthUtils;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,12 @@ public class ArticleController {
     @GetMapping("/today")
     public ResponseEntity<Map<String, List<DailySummaryResponse>>> getDailySummaries() {
         return ResponseEntity.ok(Map.of("articles", articleService.getDailySummaries()));
+    }
+
+    @GetMapping("/weekly")
+    public ResponseEntity<Map<String, List<WeeklyEventResponse>>> getWeeklyEvents(Authentication authentication) {
+        String email = AuthUtils.resolveEmail(authentication);
+        return ResponseEntity.ok(Map.of("events", articleService.getWeeklyEvents(email)));
     }
 
     @GetMapping("/{id}")

@@ -7,6 +7,7 @@ import com.example.neeews.article.dto.response.ArticleDetailResponse;
 import com.example.neeews.article.dto.response.ArticleResponse;
 import com.example.neeews.article.dto.response.DailySummaryResponse;
 import com.example.neeews.article.dto.response.HeadlineSectionResponse;
+import com.example.neeews.article.dto.response.WeeklyEventResponse;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.bookmark.service.BookmarkService;
@@ -78,6 +79,9 @@ public class ArticleService {
     private static final int MIN_SOURCES_PER_EVENT = 2;
     // 건수를 고정하진 않지만, 큰 사건이 몰린 날 목록이 끝없이 길어지는 것만 막는다.
     private static final int TODAY_MAX_EVENTS = 20;
+    // 달력의 주가 아니라 지금부터 7일을 본다. 달력 주로 자르면 월요일 아침 목록이 거의 비어 있다.
+    private static final int WEEKLY_WINDOW_DAYS = 7;
+    private static final int WEEKLY_MAX_EVENTS = 10;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
     private static final String FEED_BREAKING = "breaking";
@@ -176,6 +180,31 @@ public class ArticleService {
                 .sorted(Comparator.comparingLong(ArticleService::sourceCount).reversed())
                 .limit(TODAY_MAX_EVENTS)
                 .map(cluster -> DailySummaryResponse.from(cluster.get(0)))
+                .toList();
+    }
+
+    // 트랜잭션을 걸지 않는다. 일주일 치를 묶는 동안 DB 커넥션을 쥐지 않도록, 조회는 리포지토리 메서드의 트랜잭션으로 끝낸다.
+    public List<WeeklyEventResponse> getWeeklyEvents(String email) {
+        List<WeeklyEventResponse> events = homeFeedCache.weeklyEvents(this::loadWeeklyEvents);
+        if (email == null) return events;
+
+        Set<Long> readIds = articleReadService.getReadArticleIds(
+                email, events.stream().flatMap(e -> e.getArticleIds().stream()).toList());
+        return events.stream()
+                .map(e -> e.withRead(e.getArticleIds().stream().anyMatch(readIds::contains)))
+                .toList();
+    }
+
+    // 며칠에 걸쳐 이어진 사건은 날마다의 보도가 한 묶음으로 모인다. 보도한 매체가 많은 순, 같으면 기사가 많은 순이다.
+    private List<WeeklyEventResponse> loadWeeklyEvents() {
+        List<Article> candidates = articleRepository.findSummarizedImportantSince(
+                PublishedTime.now().minusDays(WEEKLY_WINDOW_DAYS), summaryMinScore);
+        Comparator<List<Article>> byCoverage = Comparator.comparingLong(ArticleService::sourceCount);
+        return clusterByEvent(candidates).stream()
+                .filter(cluster -> sourceCount(cluster) >= MIN_SOURCES_PER_EVENT)
+                .sorted(byCoverage.thenComparingInt(List::size).reversed())
+                .limit(WEEKLY_MAX_EVENTS)
+                .map(cluster -> WeeklyEventResponse.of(cluster, sourceCount(cluster)))
                 .toList();
     }
 
