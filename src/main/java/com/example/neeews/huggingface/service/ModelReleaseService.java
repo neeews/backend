@@ -53,6 +53,13 @@ public class ModelReleaseService {
                 .map(ModelResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public List<ModelResponse> getNewlyVisibleSince(LocalDateTime since) {
+        return modelReleaseRepository.findByVisibleAtAfterOrderByLikesDesc(since).stream()
+                .map(ModelResponse::from)
+                .toList();
+    }
+
     private int collectOrg(String org) {
         List<HuggingFaceClient.ModelInfo> models = huggingFaceClient.findLatestModels(org).stream()
                 .filter(model -> !model.isQuantized() && model.createdAt() != null)
@@ -78,9 +85,11 @@ public class ModelReleaseService {
 
     // 새로 담았으면 true. 이미 담은 모델은 좋아요와 라이선스만 갱신한다.
     private boolean upsert(HuggingFaceClient.ModelInfo model, ModelRelease known, LocalDateTime cutoff) {
+        boolean visible = model.likes() >= minLikes;
         if (known != null) {
             known.updatePopularity(model.likes(), model.downloads());
             known.updateLicense(model.licenseId(), model.licenseName(), model.licenseUrl());
+            if (visible) known.markVisible(PublishedTime.now());
             modelReleaseRepository.save(known);
             return false;
         }
@@ -99,6 +108,7 @@ public class ModelReleaseService {
                 .likes(model.likes())
                 .downloads(model.downloads())
                 .releasedAt(releasedAt)
+                .visibleAt(visible ? PublishedTime.now() : null)
                 .build());
         return true;
     }

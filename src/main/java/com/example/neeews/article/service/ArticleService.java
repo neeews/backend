@@ -82,6 +82,8 @@ public class ArticleService {
     // 달력의 주가 아니라 지금부터 7일을 본다. 달력 주로 자르면 월요일 아침 목록이 거의 비어 있다.
     private static final int WEEKLY_WINDOW_DAYS = 7;
     private static final int WEEKLY_MAX_EVENTS = 10;
+    // 같은 사건을 여러 매체가 쓰면 상위 칸이 한 사건으로 채워져, 넉넉히 뽑은 뒤 사건별로 하나씩 고른다.
+    private static final int CATEGORY_TOP_CANDIDATE_LIMIT = 30;
     private static final int POPULAR_WINDOW_DAYS = 7;
 
     private static final String FEED_BREAKING = "breaking";
@@ -206,6 +208,13 @@ public class ArticleService {
                 .limit(WEEKLY_MAX_EVENTS)
                 .map(cluster -> WeeklyEventResponse.of(cluster, sourceCount(cluster)))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ArticleResponse> getTopArticlesSince(String category, LocalDateTime since, int limit) {
+        List<Article> candidates = articleRepository.findByCategoryAndPublishedAtAfterOrderByAiImportanceScoreDescPublishedAtDesc(
+                category, since, PageRequest.of(0, CATEGORY_TOP_CANDIDATE_LIMIT));
+        return toResponses(distinctEvents(candidates, limit), null);
     }
 
     // 점수 높은 순으로 들어오므로 각 묶음의 첫 기사가 그 사건의 대표가 된다.

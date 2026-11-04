@@ -17,4 +17,6 @@ public interface ModelReleaseRepository extends JpaRepository<ModelRelease, Long
 
     List<ModelRelease> findByLikesGreaterThanEqualAndAiSummaryIsNullAndReleasedAtAfter(
             long minLikes, LocalDateTime releasedAfter, Pageable pageable);
+
+    List<ModelRelease> findByVisibleAtAfterOrderByLikesDesc(LocalDateTime visibleAfter);
 }

@@ -28,6 +28,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findTop5ByOrderByPublishedAtDesc();
 
+    // 아직 판정 전인 기사는 점수가 NULL이라 DESC 정렬에서 맨 뒤로 간다.
+    List<Article> findByCategoryAndPublishedAtAfterOrderByAiImportanceScoreDescPublishedAtDesc(
+            String category, LocalDateTime after, Pageable pageable);
+
     List<Article> findTop6ByAiImportanceAndPublishedAtAfterOrderByPublishedAtDesc(
             Importance aiImportance, LocalDateTime after);
 

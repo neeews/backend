@@ -59,6 +59,9 @@ public class ModelRelease {
     @Column(nullable = false, updatable = false)
     private LocalDateTime fetchedAt;
 
+    // 좋아요가 노출 기준을 처음 넘은 시각(한국 시간). 브리핑 메일이 "새로 뜬 모델"을 하루 한 번만 싣는 데 쓴다.
+    private LocalDateTime visibleAt;
+
     @PrePersist
     void onCreate() {
         this.fetchedAt = LocalDateTime.now();
@@ -78,5 +81,11 @@ public class ModelRelease {
 
     public void updateAiSummary(String aiSummary) {
         this.aiSummary = aiSummary;
+    }
+
+    public void markVisible(LocalDateTime at) {
+        if (this.visibleAt == null) {
+            this.visibleAt = at;
+        }
     }
 }
