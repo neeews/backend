@@ -5,6 +5,7 @@ import com.example.neeews.articleread.service.ArticleReadService;
 import com.example.neeews.auth.dto.response.UserResponse;
 import com.example.neeews.search.service.SearchHistoryService;
 import com.example.neeews.security.AuthUtils;
+import com.example.neeews.user.dto.request.BriefingSubscriptionRequest;
 import com.example.neeews.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,16 @@ public class UserController {
     public ResponseEntity<Void> clearSearchHistory(Authentication authentication) {
         searchHistoryService.clearHistory(authentication.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/me/briefing")
+    public ResponseEntity<Map<String, Boolean>> updateBriefingSubscription(
+            @RequestBody BriefingSubscriptionRequest request,
+            Authentication authentication
+    ) {
+        boolean subscribed = userService.updateBriefingSubscription(
+                AuthUtils.resolveEmail(authentication), request.isSubscribed());
+        return ResponseEntity.ok(Map.of("subscribed", subscribed));
     }
 
     @DeleteMapping("/me")

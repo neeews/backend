@@ -52,8 +52,34 @@ public class UserService {
         userRepository.delete(user);
     }
 
+    @Transactional
+    public boolean updateBriefingSubscription(String email, boolean subscribed) {
+        User user = getUser(email);
+        if (subscribed) {
+            user.subscribeBriefing();
+        } else {
+            user.unsubscribeBriefing();
+        }
+        return user.isBriefingSubscribed();
+    }
+
+    // 메일 링크는 로그인 없이 누른다. 없는 토큰이어도 똑같이 끝내, 토큰이 유효한지 떠보는 데 쓰이지 않게 한다.
+    @Transactional
+    public void unsubscribeBriefing(String token) {
+        userRepository.findByBriefingToken(token).ifPresent(User::unsubscribeBriefing);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BriefingRecipient> getBriefingRecipients() {
+        return userRepository.findAllByBriefingSubscribedTrue().stream()
+                .map(user -> new BriefingRecipient(user.getEmail(), user.getBriefingToken()))
+                .toList();
+    }
+
     private User getUser(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
+
+    public record BriefingRecipient(String email, String unsubscribeToken) {}
 }

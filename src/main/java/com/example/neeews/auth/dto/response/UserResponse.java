@@ -15,6 +15,7 @@ public class UserResponse {
     private String email;
     private Role role;
     private LocalDateTime createdAt;
+    private boolean briefingSubscribed;
 
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -23,6 +24,7 @@ public class UserResponse {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
+                .briefingSubscribed(user.isBriefingSubscribed())
                 .build();
     }
 }
