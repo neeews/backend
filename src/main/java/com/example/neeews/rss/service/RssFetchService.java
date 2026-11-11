@@ -146,6 +146,21 @@ public class RssFetchService {
         return updated;
     }
 
+    @Transactional
+    public int cleanStoredTitles() {
+        List<Article> targets = articleRepository.findByTitleContaining("&");
+        int updated = 0;
+        for (Article article : targets) {
+            String cleaned = HtmlText.cleanTitle(article.getTitle());
+            if (!cleaned.equals(article.getTitle())) {
+                article.updateTitle(cleaned);
+                updated++;
+            }
+        }
+        log.info("[제목 정리] 대상 {}건 중 {}건 수정", targets.size(), updated);
+        return updated;
+    }
+
     // 건별로 커밋한다 — 수백 건을 한 트랜잭션으로 묶으면 크롤링이 끝날 때까지 커넥션을 잡고 있게 된다.
     public int recrawlMissingContent(NewsSource source) {
         List<Article> targets = articleRepository.findMissingContent(

@@ -152,6 +152,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("SELECT a.category, COUNT(a) FROM Article a GROUP BY a.category ORDER BY COUNT(a) DESC")
     List<Object[]> findCategoryStats();
 
+    List<Article> findByTitleContaining(String keyword);
+
     // 오늘의 뉴스는 요약문 자체가 본문이라 요약이 달린 기사만 후보다.
     // HIGH 컷(0.5)은 하루 1,500건이 넘어 요약 배치가 따라잡지 못한다. 그래서 노출 기준은
     // HIGH 여부가 아니라 app.summary.min-score로 따로 잡은 더 높은 점수 컷을 쓴다.

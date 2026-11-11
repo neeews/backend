@@ -131,6 +131,10 @@ public class Article {
         this.category = category;
     }
 
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
     public void updateAiImportance(Importance aiImportance, Double aiImportanceScore) {
         this.aiImportance = aiImportance;
         this.aiImportanceScore = aiImportanceScore;

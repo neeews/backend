@@ -37,6 +37,11 @@ public class RssController {
         return ResponseEntity.ok(Map.of("updated", rssFetchService.normalizeCategories()));
     }
 
+    @PostMapping("/clean-titles")
+    public ResponseEntity<Map<String, Integer>> cleanTitles() {
+        return ResponseEntity.ok(Map.of("updated", rssFetchService.cleanStoredTitles()));
+    }
+
     @GetMapping("/categories")
     public ResponseEntity<Map<String, Object>> categoryStats() {
         return ResponseEntity.ok(Map.of("categories", rssFetchService.getCategoryStats()));
