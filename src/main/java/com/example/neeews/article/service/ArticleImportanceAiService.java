@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.HtmlText;
 import com.example.neeews.article.domain.Importance;
 import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.repository.ArticleRepository;
@@ -10,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -106,6 +106,6 @@ public class ArticleImportanceAiService {
 
     private String stripHtml(String text) {
         if (text == null) return null;
-        return HtmlUtils.htmlUnescape(text.replaceAll("<[^>]*>", "")).trim();
+        return HtmlText.unescape(text.replaceAll("<[^>]*>", "")).trim();
     }
 }

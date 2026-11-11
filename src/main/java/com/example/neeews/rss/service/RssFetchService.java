@@ -1,6 +1,7 @@
 package com.example.neeews.rss.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.HtmlText;
 import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.repository.ArticleRepository;
 import com.example.neeews.rss.domain.NewsSource;
@@ -20,7 +21,6 @@ import org.jsoup.nodes.Element;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -195,7 +195,7 @@ public class RssFetchService {
                             : extractCategory(entry.getCategories());
 
                     articleRepository.save(Article.builder()
-                            .title(entry.getTitle())
+                            .title(HtmlText.cleanTitle(entry.getTitle()))
                             .link(link)
                             .description(description)
                             .author(author)
@@ -305,7 +305,7 @@ public class RssFetchService {
             StringBuilder body = new StringBuilder();
             for (JsonNode element : elements) {
                 if (!"text".equals(element.path("type").asString())) continue;
-                String text = HtmlUtils.htmlUnescape(
+                String text = HtmlText.unescape(
                         element.path("content").asString().replaceAll("<[^>]*>", "")).trim();
                 if (text.isEmpty()) continue;
                 if (!body.isEmpty()) body.append("\n\n");

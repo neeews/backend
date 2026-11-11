@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.HtmlText;
 import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.domain.TopicMentionCount;
 import com.example.neeews.article.repository.ArticleRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,7 +69,7 @@ public class HotTopicService {
 
         Map<String, Long> hourlyWordCount = hourlyArticles.stream()
                 .map(a -> a.getTitle() + " " + (a.getDescription() != null
-                        ? HtmlUtils.htmlUnescape(a.getDescription().replaceAll("<[^>]*>", ""))
+                        ? HtmlText.unescape(a.getDescription().replaceAll("<[^>]*>", ""))
                         : ""))
                 .flatMap(text -> komoran.analyze(text).getNouns().stream())
                 .filter(w -> w.length() >= 2)

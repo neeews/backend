@@ -1,6 +1,7 @@
 package com.example.neeews.article.service;
 
 import com.example.neeews.article.domain.Article;
+import com.example.neeews.article.domain.HtmlText;
 import com.example.neeews.article.domain.Importance;
 import com.example.neeews.article.domain.PublishedTime;
 import com.example.neeews.article.dto.response.ArticleDetailResponse;
@@ -22,7 +23,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -320,7 +320,7 @@ public class ArticleService {
 
     private static Set<String> charBigrams(String text) {
         if (text == null) return Set.of();
-        String cleaned = BRACKET_TAG.matcher(HtmlUtils.htmlUnescape(text)).replaceAll("");
+        String cleaned = BRACKET_TAG.matcher(HtmlText.unescape(text)).replaceAll("");
         String normalized = NON_ALPHANUMERIC.matcher(cleaned).replaceAll("").toLowerCase();
         if (normalized.length() < 2) return normalized.isEmpty() ? Set.of() : Set.of(normalized);
         Set<String> bigrams = new HashSet<>();
